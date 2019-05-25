@@ -11,12 +11,29 @@
             <a class="brand-logo center">Drill Creator!</a>
         </div>
     </nav>
+    <div style="top: 0; left: 0; right: 0">
+        <canvas id="canvasMain" width="800" height="500" style="border: 1px solid #000000;"></canvas>
+    </div>
     <ul id="list"></ul>
 
     <script>
         const electron = require('electron');
         const {ipcRenderer} = electron;
 
+        const c = document.querySelector('#canvasMain');
+
+        ipcRenderer.on('item:add', function(e, item){
+            const ctx = c.getContext('2d');
+
+            ctx.font = '30px Arial';
+            ctx.fillText(item, Math.random() * 800, Math.random() * 500);
+
+        });
+
+        //TODO work on moving things with the mouse and implementing
+        //TODO a game loop. Look at this tutorial https://simonsarris.com/making-html5-canvas-useful/
+
+        /*
         const ul = document.querySelector('#list');
 
         // Catch add item and add item element
@@ -42,6 +59,7 @@
                 ul.className = '';
             }
         });
+        */
     </script>
 </body>
 </html>

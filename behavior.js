@@ -13,9 +13,12 @@ const label = document.querySelector('#label');
 const activeX = document.querySelector('#activeX');
 const activeY = document.querySelector('#activeY');
 
+const smallGrid = document.querySelector('#smallGrid');
+
 const drawings = [];
 
 let activeObject = null;
+let activeLine = null;
 let play = true;
 
 let i = setInterval(function () {
@@ -81,6 +84,49 @@ function objClick(object){
     activeObject = object;
     updateProperties();
 }
+
+function round(num) {
+    const multiple = 10; //TODO make this an enabled effect, AKA, change the multiple to like 10 or something
+    if (num % multiple === 0) {
+        return num
+    } else if (num % multiple < multiple/2) {
+        return num - (num % multiple);
+    } else {
+        return num + (multiple - num % multiple);
+    }
+}
+
+
+svgCanvas.onmousedown = function(e){
+    if (e.button === 0) {
+        const element = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        element.setAttributeNS(null, 'x1', round(e.offsetX));
+        element.setAttributeNS(null, 'y1', round(e.offsetY));
+        element.setAttributeNS(null, 'x2', round(e.offsetX));
+        element.setAttributeNS(null, 'y2', round(e.offsetY));
+        element.setAttributeNS(null, 'style', "stroke:rgb(255,0,0);stroke-width:2");
+        activeLine = element;
+        svgCanvas.appendChild(element);
+        smallGrid.setAttribute('visibility', 'visible');
+    }
+};
+
+svgCanvas.onmousemove = function(e) {
+    if (activeLine != null && e.button === 0) {
+        activeLine.setAttributeNS(null, 'x2', round(e.offsetX));
+        activeLine.setAttributeNS(null, 'y2', round(e.offsetY));
+    }
+};
+
+svgCanvas.onmouseup = function(e) {
+    if (activeLine != null && e.button === 0) {
+        activeLine.setAttributeNS(null, 'x2', round(e.offsetX));
+        activeLine.setAttributeNS(null, 'y2', round(e.offsetY));
+        activeLine = null;
+        smallGrid.setAttribute('visibility', 'hidden');
+    }
+};
+
 
 ipcRenderer.on('item:add', function(e, item){
     const element = document.createElementNS('http://www.w3.org/2000/svg', 'text');

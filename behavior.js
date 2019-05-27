@@ -12,14 +12,53 @@ const stepBackButton = document.querySelector('#stepbbtn');
 const label = document.querySelector('#label');
 const activeX = document.querySelector('#activeX');
 const activeY = document.querySelector('#activeY');
+const virtualXLabel = document.querySelector('#virtualX');
+const virtualYLabel = document.querySelector('#virtualY');
+const panValue = document.querySelector('#panValue');
+const zoomValue = document.querySelector('#zoomValue');
 
 const smallGrid = document.querySelector('#smallGrid');
+const gridRect = document.querySelector('#gridRect');
+
+const g = document.querySelector('#svgG');
+
+const gridCheckbox = document.querySelector('#gridCheckbox');
+const drawLineCheckbox = document.querySelector('#drawLineCheckbox');
+const eraseLineCheckbox = document.querySelector('#eraseLineCheckbox');
 
 const drawings = [];
 
 let activeObject = null;
 let activeLine = null;
 let play = true;
+let enableErasing = false;
+let enableDrawing = false;
+
+let gridMultiple = 1;
+
+let panZoomCanvas = svgPanZoom('#svgMain', {panEnabled: false, beforePan: panCheck, controlIconsEnabled: true, minZoom: 1, dblClickZoomEnabled: false, });
+panZoomCanvas.zoom(2);
+panZoomCanvas.center();
+
+
+/**
+ * Restricts panning (and consequently the zoom region) to the size of the full container.
+ * Don't ask me why the right/bottom edge equations are the way they are. I don't understand why that works.
+ * @param oldPan The pan value before the pan step happens
+ * @param newPan The hypothetical pan values should the pan step happen normally
+ * @return customPan The actual pan step
+ */
+function panCheck(oldPan, newPan) {
+    let customPan = {};
+    let leftEdge = 0;
+    let topEdge = 0;
+    let rightEdge = -1 * canvasDiv.offsetWidth*(panZoomCanvas.getZoom()*2 - 1);
+    let bottomEdge = -1 * canvasDiv.offsetHeight*(panZoomCanvas.getZoom()*2 - 1);
+    customPan.x = Math.max(rightEdge, Math.min(leftEdge, newPan.x));
+    customPan.y = Math.max(bottomEdge, Math.min(topEdge, newPan.y));
+    return customPan;
+}
+
 
 let i = setInterval(function () {
     if (play) {
@@ -80,53 +119,131 @@ stepForwardButton.onclick = function(){
     }
 };
 
+function drawLineCheckboxClick() {
+    if (drawLineCheckbox.checked === true) {
+        eraseLineCheckbox.checked = false;
+        enableErasing = false;
+        enableDrawing = true;
+    } else {
+        enableDrawing = false;
+    }
+}
+
+function eraseLineCheckboxClick() {
+    if (eraseLineCheckbox.checked === true) {
+        drawLineCheckbox.checked = false;
+        enableErasing = true;
+        enableDrawing = false;
+    } else {
+        enableErasing = false;
+    }
+}
+
+function gridCheckboxClick() {
+    if (gridCheckbox.checked === true) {
+        gridRect.setAttribute('visibility', 'visible');
+        gridMultiple = 10;
+    } else {
+        gridRect.setAttribute('visibility', 'hidden');
+        gridMultiple = 1;
+    }
+}
+
 function objClick(object){
     activeObject = object;
     updateProperties();
 }
 
 function round(num) {
-    const multiple = 10; //TODO make this an enabled effect, AKA, change the multiple to like 10 or something
-    if (num % multiple === 0) {
+    if (num % gridMultiple === 0) {
         return num
-    } else if (num % multiple < multiple/2) {
-        return num - (num % multiple);
+    } else if (num % gridMultiple < gridMultiple/2) {
+        return num - (num % gridMultiple);
     } else {
-        return num + (multiple - num % multiple);
+        return num + (gridMultiple - num % gridMultiple);
     }
 }
 
+function objectEntered(e, element) {
+    if (enableErasing) {
+        g.removeChild(element);
+        element = null;
+    }
+}
 
 svgCanvas.onmousedown = function(e){
-    if (e.button === 0) {
+    let virtualXY = getSvgPoint(e.offsetX, e.offsetY);
+    if (e.button === 0 && enableDrawing) {
+        //left click
         const element = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-        element.setAttributeNS(null, 'x1', round(e.offsetX));
-        element.setAttributeNS(null, 'y1', round(e.offsetY));
-        element.setAttributeNS(null, 'x2', round(e.offsetX));
-        element.setAttributeNS(null, 'y2', round(e.offsetY));
+        element.setAttributeNS(null, 'x1', round(virtualXY.x));
+        element.setAttributeNS(null, 'y1', round(virtualXY.y));
+        element.setAttributeNS(null, 'x2', round(virtualXY.x));
+        element.setAttributeNS(null, 'y2', round(virtualXY.y));
         element.setAttributeNS(null, 'style', "stroke:rgb(255,0,0);stroke-width:2");
         activeLine = element;
-        svgCanvas.appendChild(element);
+        g.appendChild(element);
+        element.addEventListener("mouseenter", function (e) {
+           objectEntered(e, element);
+        });
+        element.addEventListener("mousedown", function (e) {
+            objectEntered(e, element);
+        });
         smallGrid.setAttribute('visibility', 'visible');
+    } else if (e.button === 1) {
+        //middle click
+        panZoomCanvas.enablePan();
     }
 };
 
 svgCanvas.onmousemove = function(e) {
-    if (activeLine != null && e.button === 0) {
-        activeLine.setAttributeNS(null, 'x2', round(e.offsetX));
-        activeLine.setAttributeNS(null, 'y2', round(e.offsetY));
+    activeX.innerText = "X: " + e.offsetX + "/" + canvasDiv.offsetWidth;
+    activeY.innerText = "Y: " + e.offsetY + "/" + canvasDiv.offsetHeight;
+    zoomValue.innerText = "Zoom: " + panZoomCanvas.getZoom();
+    panValue.innerText = "Pan: " + Math.floor(panZoomCanvas.getPan().x) + "," + Math.floor(panZoomCanvas.getPan().y);
+
+    let virtualXY = getSvgPoint(e.offsetX, e.offsetY);
+
+    virtualXLabel.innerText = "Calculated Virtual X: " + virtualXY.x;
+    virtualYLabel.innerText = "Calculated Virtual Y: " + virtualXY.y;
+
+    if (activeLine != null && e.button === 0 && enableDrawing) {
+        activeLine.setAttributeNS(null, 'x2', round(virtualXY.x));
+        activeLine.setAttributeNS(null, 'y2', round(virtualXY.y));
     }
 };
 
 svgCanvas.onmouseup = function(e) {
-    if (activeLine != null && e.button === 0) {
-        activeLine.setAttributeNS(null, 'x2', round(e.offsetX));
-        activeLine.setAttributeNS(null, 'y2', round(e.offsetY));
+    let virtualXY = getSvgPoint(e.offsetX, e.offsetY);
+    if (activeLine != null && e.button === 0 && enableDrawing) {
+        activeLine.setAttributeNS(null, 'x2', round(virtualXY.x));
+        activeLine.setAttributeNS(null, 'y2', round(virtualXY.y));
         activeLine = null;
         smallGrid.setAttribute('visibility', 'hidden');
+    } else if (e.button === 1) {
+        panZoomCanvas.disablePan();
     }
 };
 
+
+/**
+ * Transforms 'regular' coordinates into virtual SVG coordinates.
+ * Beware, svgCanvas and g are hardcoded in.
+ * This may cause issues in a future situation I'm not currently forseeing (as of 5/26/19).
+ * If it is an issue, I'd imagine you could pass both the SVG and the G in as paramters and be no big deal.
+ * @param x "Real" Screen X coordinate
+ * @param y "Real" Screen Y coordinate
+ * @returns svgDropPoint a DOM with a "Virtual" SVG X and Y attached.
+ */
+function getSvgPoint(x, y) {
+    let svgDropPoint = svgCanvas.createSVGPoint();
+
+    svgDropPoint.x = x;
+    svgDropPoint.y = y;
+
+    svgDropPoint = svgDropPoint.matrixTransform(g.getCTM().inverse());
+    return svgDropPoint;
+}
 
 ipcRenderer.on('item:add', function(e, item){
     const element = document.createElementNS('http://www.w3.org/2000/svg', 'text');
@@ -134,7 +251,7 @@ ipcRenderer.on('item:add', function(e, item){
     element.setAttributeNS(null, 'y', 150);
     const txt = document.createTextNode(item);
     element.appendChild(txt);
-    svgCanvas.appendChild(element);
+    g.appendChild(element);
     let object = {
         svg: element,
         xVel: 2,

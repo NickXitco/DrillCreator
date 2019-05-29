@@ -10,12 +10,12 @@ const stepForwardButton = document.querySelector('#stepfbtn');
 const stepBackButton = document.querySelector('#stepbbtn');
 
 const label = document.querySelector('#label');
-const activeX = document.querySelector('#activeX');
-const activeY = document.querySelector('#activeY');
-const virtualXLabel = document.querySelector('#virtualX');
-const virtualYLabel = document.querySelector('#virtualY');
-const panValue = document.querySelector('#panValue');
-const zoomValue = document.querySelector('#zoomValue');
+const activeX1 = document.querySelector('#activeX1');
+const activeY1 = document.querySelector('#activeY1');
+const activeX2 = document.querySelector('#activeX2');
+const activeY2 = document.querySelector('#activeY2');
+const activeWidth = document.querySelector('#activeWidth');
+const activeHeight = document.querySelector('#activeHeight');
 
 const smallGrid = document.querySelector('#smallGrid');
 const gridRect = document.querySelector('#gridRect');
@@ -36,7 +36,7 @@ let enableDrawing = false;
 
 let gridMultiple = 1;
 
-let panZoomCanvas = svgPanZoom('#svgMain', {panEnabled: false, beforePan: panCheck, controlIconsEnabled: true, minZoom: 1, dblClickZoomEnabled: false, });
+let panZoomCanvas = svgPanZoom('#svgMain', {panEnabled: false, beforePan: panCheck, controlIconsEnabled: false, minZoom: 1, dblClickZoomEnabled: false, });
 panZoomCanvas.zoom(2);
 panZoomCanvas.center();
 
@@ -59,20 +59,26 @@ function panCheck(oldPan, newPan) {
     return customPan;
 }
 
-
+/*
 let i = setInterval(function () {
     if (play) {
         step();
         //if ENDSTATE: clearInterval(i)
     }
 }, 16.7);
+*/
 
 function updateProperties() {
     if (activeObject != null) {
-        label.innerText = "Label: " + activeObject.svg.textContent;
-        activeX.innerText = "X: " + activeObject.svg.getAttributeNS(null,'x');
-        activeY.innerText = "Y: " + activeObject.svg.getAttributeNS(null,'y');
-
+        if (activeObject.textContent != null) {
+            label.innerText = "Label: " + activeObject.textContent;
+        }
+        activeX1.value = "X1: " + activeObject.getAttribute('x1');
+        activeY1.value = "Y1: " + activeObject.getAttribute('y1');
+        activeX2.value = "X2: " + activeObject.getAttribute('x2');
+        activeY2.value = "Y2: " + activeObject.getAttribute('y2');
+        activeWidth.value = "Width: " + activeObject.getAttribute('activeWidth');
+        activeHeight.value = "Height: " + activeObject.getAttribute('activeHeight');
     }
 }
 
@@ -171,6 +177,12 @@ function objectEntered(e, element) {
     }
 }
 
+function objectClick(e, element) {
+    activeObject = element;
+    element.setAttribute('style', "stroke:rgb(0,255,0);stroke-width:2");
+    updateProperties();
+}
+
 svgCanvas.onmousedown = function(e){
     let virtualXY = getSvgPoint(e.offsetX, e.offsetY);
     if (e.button === 0 && enableDrawing) {
@@ -182,12 +194,14 @@ svgCanvas.onmousedown = function(e){
         element.setAttributeNS(null, 'y2', round(virtualXY.y));
         element.setAttributeNS(null, 'style', "stroke:rgb(255,0,0);stroke-width:2");
         activeLine = element;
+        activeObject = activeLine;
+        updateProperties();
         g.appendChild(element);
         element.addEventListener("mouseenter", function (e) {
-           objectEntered(e, element);
-        });
-        element.addEventListener("mousedown", function (e) {
             objectEntered(e, element);
+        });
+        element.addEventListener("click", function (e) {
+            objectClick(e, element);
         });
         smallGrid.setAttribute('visibility', 'visible');
     } else if (e.button === 1) {
@@ -197,17 +211,9 @@ svgCanvas.onmousedown = function(e){
 };
 
 svgCanvas.onmousemove = function(e) {
-    activeX.innerText = "X: " + e.offsetX + "/" + canvasDiv.offsetWidth;
-    activeY.innerText = "Y: " + e.offsetY + "/" + canvasDiv.offsetHeight;
-    zoomValue.innerText = "Zoom: " + panZoomCanvas.getZoom();
-    panValue.innerText = "Pan: " + Math.floor(panZoomCanvas.getPan().x) + "," + Math.floor(panZoomCanvas.getPan().y);
-
     let virtualXY = getSvgPoint(e.offsetX, e.offsetY);
-
-    virtualXLabel.innerText = "Calculated Virtual X: " + virtualXY.x;
-    virtualYLabel.innerText = "Calculated Virtual Y: " + virtualXY.y;
-
     if (activeLine != null && e.button === 0 && enableDrawing) {
+        updateProperties();
         activeLine.setAttributeNS(null, 'x2', round(virtualXY.x));
         activeLine.setAttributeNS(null, 'y2', round(virtualXY.y));
     }
@@ -219,6 +225,7 @@ svgCanvas.onmouseup = function(e) {
         activeLine.setAttributeNS(null, 'x2', round(virtualXY.x));
         activeLine.setAttributeNS(null, 'y2', round(virtualXY.y));
         activeLine = null;
+        updateProperties();
         smallGrid.setAttribute('visibility', 'hidden');
     } else if (e.button === 1) {
         panZoomCanvas.disablePan();
@@ -247,8 +254,8 @@ function getSvgPoint(x, y) {
 
 ipcRenderer.on('item:add', function(e, item){
     const element = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    element.setAttributeNS(null, 'x', 500);
-    element.setAttributeNS(null, 'y', 150);
+    element.setAttributeNS(null, 'x', "" + 500);
+    element.setAttributeNS(null, 'y', "" + 150);
     const txt = document.createTextNode(item);
     element.appendChild(txt);
     g.appendChild(element);

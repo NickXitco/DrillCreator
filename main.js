@@ -74,6 +74,11 @@ ipcMain.on('item:add', function(e, item){
     addItemWindow.close();
 });
 
+ipcMain.on('new:open', function(){
+    createAddItemWindow();
+});
+
+
 // Quit when all windows are closed.
 app.on('window-all-closed', () => {
     // On macOS it is common for applications and their menu bar
@@ -117,12 +122,6 @@ const mainMenuTemplate = [
         ]
     }
 ];
-
-// If mac, add empty object because of apparent weird behavior
-if (process.platform === 'darwin') {
-    // noinspection JSCheckFunctionSignatures
-    mainMenuTemplate.unshift({});
-}
 
 // Add developer tools item if not in prod
 if (process.env.NODE_ENV !== 'production') {

@@ -1,6 +1,13 @@
 const electron = require('electron');
 const {ipcRenderer} = electron;
 
+const createNewButton = document.querySelector('#createNew');
+createNewButton.addEventListener('click', openNewItemDialog);
+
+function openNewItemDialog() {
+    ipcRenderer.send('new:open');
+}
+
 const svgCanvas = document.querySelector('#svgMain');
 const canvasDiv = document.querySelector('#canvas');
 
@@ -25,14 +32,28 @@ const g = document.querySelector('#svgG');
 const gridCheckbox = document.querySelector('#gridCheckbox');
 const drawLineCheckbox = document.querySelector('#drawLineCheckbox');
 const eraseLineCheckbox = document.querySelector('#eraseLineCheckbox');
+const curveCheckbox = document.querySelector('#curveToolCheckbox');
+
 
 const drawings = [];
 
 let activeObject = null;
 let activeLine = null;
+let controlPoint = null;
+let movingControlPoint = false;
+
+let anchorX = null;
+let anchorY = null;
+let endpointX  = null;
+let endpointY = null;
+let controlPointX= null;
+let controlPointY = null;
+
 let play = true;
+
 let enableErasing = false;
 let enableDrawing = false;
+let enableCurves = false;
 
 let gridMultiple = 1;
 
@@ -125,6 +146,7 @@ stepForwardButton.onclick = function(){
     }
 };
 
+// noinspection JSUnusedLocalSymbols
 function drawLineCheckboxClick() {
     if (drawLineCheckbox.checked === true) {
         eraseLineCheckbox.checked = false;
@@ -135,6 +157,7 @@ function drawLineCheckboxClick() {
     }
 }
 
+// noinspection JSUnusedLocalSymbols
 function eraseLineCheckboxClick() {
     if (eraseLineCheckbox.checked === true) {
         drawLineCheckbox.checked = false;
@@ -145,6 +168,7 @@ function eraseLineCheckboxClick() {
     }
 }
 
+// noinspection JSUnusedLocalSymbols
 function gridCheckboxClick() {
     if (gridCheckbox.checked === true) {
         gridRect.setAttribute('visibility', 'visible');
@@ -155,9 +179,23 @@ function gridCheckboxClick() {
     }
 }
 
-function objClick(object){
-    activeObject = object;
-    updateProperties();
+// noinspection JSUnusedLocalSymbols
+function selectToolCheckboxClick() {
+    
+}
+
+// noinspection JSUnusedLocalSymbols
+function curveToolCheckboxClick() {
+    if(curveCheckbox.checked === true) {
+        drawLineCheckbox.checked = false;
+        enableDrawing = false;
+        eraseLineCheckbox.checked = false;
+        enableErasing = false;
+        enableCurves = true;
+    }
+    else {
+        enableCurves = false
+    }
 }
 
 function round(num) {
@@ -183,16 +221,63 @@ function objectClick(e, element) {
     updateProperties();
 }
 
+function controlPointDown(e, element, path) {
+
+    element.setAttribute('style', "stroke:purple;stroke-width:1;fill:purple;fill-opacity: 0.5");
+    movingControlPoint = true;
+    controlPoint = element;
+    activeLine = path;
+    activeLine.setAttribute('stroke', "green");
+}
+
+function controlPointMouseOn(e, element) {
+    if (!movingControlPoint) {
+        element.setAttribute('style', "stroke:purple;stroke-width:1;fill:purple;fill-opacity: 0.1");
+    }
+}
+
+function controlPointMouseOff(e, element) {
+    if (!movingControlPoint) {
+        element.setAttribute('style', "stroke:purple;stroke-width:1;fill:purple;fill-opacity: 0");
+    }
+}
+
+
 svgCanvas.onmousedown = function(e){
     let virtualXY = getSvgPoint(e.offsetX, e.offsetY);
-    if (e.button === 0 && enableDrawing) {
+    if (e.button === 0 && (enableDrawing || enableCurves)) {
         //left click
-        const element = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-        element.setAttributeNS(null, 'x1', round(virtualXY.x));
-        element.setAttributeNS(null, 'y1', round(virtualXY.y));
-        element.setAttributeNS(null, 'x2', round(virtualXY.x));
-        element.setAttributeNS(null, 'y2', round(virtualXY.y));
-        element.setAttributeNS(null, 'style', "stroke:rgb(255,0,0);stroke-width:2");
+        let element;
+        if (enableDrawing) {
+            element = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            element.setAttributeNS(null, 'x1', round(virtualXY.x));
+            element.setAttributeNS(null, 'y1', round(virtualXY.y));
+            element.setAttributeNS(null, 'x2', round(virtualXY.x));
+            element.setAttributeNS(null, 'y2', round(virtualXY.y));
+            element.setAttributeNS(null, 'style', "stroke:rgb(255,0,0);stroke-width:2");
+        } else if (enableCurves) {
+            element = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            anchorX = round(virtualXY.x);
+            anchorY = round(virtualXY.y);
+            element.setAttribute('d', "M " + anchorX + " " + anchorY);
+            element.setAttribute('stroke', "blue");
+            element.setAttribute('fill', "none");
+
+            const cp = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            cp.setAttribute('r', "" + 5);
+            cp.setAttribute('style', "stroke:purple;stroke-width:1;fill:purple;fill-opacity: 0");
+            controlPoint = cp;
+            g.appendChild(cp);
+            cp.addEventListener("mousedown", function (e) {
+                controlPointDown(e, cp, element);
+            });
+            cp.addEventListener("mouseenter", function (e) {
+                controlPointMouseOn(e, cp);
+            });
+            cp.addEventListener("mouseout", function (e) {
+                controlPointMouseOff(e, cp);
+            });
+        }
         activeLine = element;
         activeObject = activeLine;
         updateProperties();
@@ -212,18 +297,63 @@ svgCanvas.onmousedown = function(e){
 
 svgCanvas.onmousemove = function(e) {
     let virtualXY = getSvgPoint(e.offsetX, e.offsetY);
-    if (activeLine != null && e.button === 0 && enableDrawing) {
+
+    if (movingControlPoint) {
+        controlPointX = round(virtualXY.x);
+        controlPointY = round(virtualXY.y);
+
+        controlPoint.setAttribute('cx', controlPointX);
+        controlPoint.setAttribute('cy', controlPointY);
+
+        activeLine.setAttribute('d', "M" + anchorX + " " + anchorY + " Q" + controlPointX + " " + controlPointY + " " + endpointX + " " + endpointY);
+
+    } else if (activeLine != null && e.button === 0 && (enableDrawing || enableCurves)) {
         updateProperties();
-        activeLine.setAttributeNS(null, 'x2', round(virtualXY.x));
-        activeLine.setAttributeNS(null, 'y2', round(virtualXY.y));
+        if (enableDrawing) {
+            activeLine.setAttributeNS(null, 'x2', round(virtualXY.x));
+            activeLine.setAttributeNS(null, 'y2', round(virtualXY.y));
+        } else if (enableCurves) {
+            endpointX = round(virtualXY.x);
+            endpointY = round(virtualXY.y);
+
+            controlPointX = (anchorX + endpointX)/2;
+            controlPointY = (anchorY + endpointY)/2;
+
+            controlPoint.setAttribute('cx', controlPointX);
+            controlPoint.setAttribute('cy', controlPointY);
+
+            activeLine.setAttribute('d', "M" + anchorX + " " + anchorY + " Q" + controlPointX + " " + controlPointY + " " + endpointX + " " + endpointY);
+        }
     }
 };
 
 svgCanvas.onmouseup = function(e) {
     let virtualXY = getSvgPoint(e.offsetX, e.offsetY);
-    if (activeLine != null && e.button === 0 && enableDrawing) {
-        activeLine.setAttributeNS(null, 'x2', round(virtualXY.x));
-        activeLine.setAttributeNS(null, 'y2', round(virtualXY.y));
+    if (movingControlPoint) {
+        controlPoint.setAttribute('cx', round(virtualXY.x));
+        controlPoint.setAttribute('cy', round(virtualXY.y));
+
+        activeLine.setAttribute('d', "M" + anchorX + " " + anchorY + " Q" + controlPointX + " " + controlPointY + " " + endpointX + " " + endpointY);
+
+        activeLine = null;
+        movingControlPoint = false;
+        controlPoint.setAttribute('style', "stroke:purple;stroke-width:1;fill:purple;fill-opacity: 0");
+    } else if (activeLine != null && e.button === 0 && (enableDrawing || enableCurves)) {
+        if (enableDrawing) {
+            activeLine.setAttributeNS(null, 'x2', round(virtualXY.x));
+            activeLine.setAttributeNS(null, 'y2', round(virtualXY.y));
+        } else if (enableCurves) {
+            endpointX = round(virtualXY.x);
+            endpointY = round(virtualXY.y);
+
+            controlPointX = (anchorX + endpointX)/2;
+            controlPointY = (anchorY + endpointY)/2;
+
+            controlPoint.setAttribute('cx', controlPointX);
+            controlPoint.setAttribute('cy', controlPointY);
+
+            activeLine.setAttribute('d', "M" + anchorX + " " + anchorY + " Q" + controlPointX + " " + controlPointY + " " + endpointX + " " + endpointY);
+        }
         activeLine = null;
         updateProperties();
         smallGrid.setAttribute('visibility', 'hidden');
@@ -237,7 +367,7 @@ svgCanvas.onmouseup = function(e) {
  * Transforms 'regular' coordinates into virtual SVG coordinates.
  * Beware, svgCanvas and g are hardcoded in.
  * This may cause issues in a future situation I'm not currently forseeing (as of 5/26/19).
- * If it is an issue, I'd imagine you could pass both the SVG and the G in as paramters and be no big deal.
+ * If it is an issue, I'd imagine you could pass both the SVG and the G in as parameters and be no big deal.
  * @param x "Real" Screen X coordinate
  * @param y "Real" Screen Y coordinate
  * @returns svgDropPoint a DOM with a "Virtual" SVG X and Y attached.
@@ -252,24 +382,18 @@ function getSvgPoint(x, y) {
     return svgDropPoint;
 }
 
-ipcRenderer.on('item:add', function(e, item){
-    const element = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    element.setAttributeNS(null, 'x', "" + 500);
-    element.setAttributeNS(null, 'y', "" + 150);
-    const txt = document.createTextNode(item);
-    element.appendChild(txt);
+
+
+ipcRenderer.on('item:add', function(){
+    //New Item
+    const element = document.createElementNS('http://www.w3.org/2000/svg', "circle");
+    element.textContent = 'Hello World!';
+    element.setAttribute('cx', '1000');
+    element.setAttribute('cy', '1000');
+    element.setAttribute('r', "10");
+    element.setAttribute('stroke', "black");
+    element.setAttribute('fill', "none");
     g.appendChild(element);
-    let object = {
-        svg: element,
-        xVel: 2,
-        yVel: 2,
-        x: element.getAttributeNS(null, 'x'),
-        y: element.getAttributeNS(null, 'y')
-    };
-    element.addEventListener("click", function(){
-        objClick(object);
-    });
-    drawings.push(object);
 });
 
 /*

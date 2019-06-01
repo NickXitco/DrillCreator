@@ -250,11 +250,11 @@ svgCanvas.onmousedown = function(e){
         let element;
         if (enableDrawing) {
             element = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-            element.setAttributeNS(null, 'x1', round(virtualXY.x));
-            element.setAttributeNS(null, 'y1', round(virtualXY.y));
-            element.setAttributeNS(null, 'x2', round(virtualXY.x));
-            element.setAttributeNS(null, 'y2', round(virtualXY.y));
-            element.setAttributeNS(null, 'style', "stroke:rgb(255,0,0);stroke-width:2");
+            element.setAttribute('x1', round(virtualXY.x));
+            element.setAttribute('y1', round(virtualXY.y));
+            element.setAttribute('x2', round(virtualXY.x));
+            element.setAttribute('y2', round(virtualXY.y));
+            element.setAttribute('style', "stroke:rgb(255,0,0);stroke-width:2");
         } else if (enableCurves) {
             element = document.createElementNS('http://www.w3.org/2000/svg', 'path');
             anchorX = round(virtualXY.x);

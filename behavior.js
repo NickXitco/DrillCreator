@@ -227,6 +227,13 @@ function controlPointDown(e, element, path) {
     movingControlPoint = true;
     controlPoint = element;
     activeLine = path;
+    let path_d = path.getAttribute('d').split(/([M ])/);
+    anchorX = path_d[2];
+    anchorY = path_d[4];
+    endpointX = path_d[10];
+    endpointY = path_d[12];
+    //TODO THIS FEELS REALLLLLY JANKY
+
     activeLine.setAttribute('stroke', "green");
 }
 
@@ -387,8 +394,7 @@ function getSvgPoint(x, y) {
 ipcRenderer.on('item:add', function(){
     //New Item
     const element = document.createElementNS('http://www.w3.org/2000/svg', "circle");
-    element.textContent = 'Hello World!';
-    element.setAttribute('cx', '1000');
+    element.setAttribute('cx', '1500');
     element.setAttribute('cy', '1000');
     element.setAttribute('r', "10");
     element.setAttribute('stroke', "black");

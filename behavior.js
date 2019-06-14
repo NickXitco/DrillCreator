@@ -39,15 +39,6 @@ const drawings = [];
 
 let activeObject = null;
 let activeLine = null;
-let controlPoint = null;
-let movingControlPoint = false;
-
-let anchorX = null;
-let anchorY = null;
-let endpointX  = null;
-let endpointY = null;
-let controlPointX= null;
-let controlPointY = null;
 
 let play = true;
 
@@ -198,104 +189,20 @@ function curveToolCheckboxClick() {
     }
 }
 
-function round(num) {
-    if (num % gridMultiple === 0) {
-        return num
-    } else if (num % gridMultiple < gridMultiple/2) {
-        return num - (num % gridMultiple);
-    } else {
-        return num + (gridMultiple - num % gridMultiple);
-    }
-}
-
-function objectEntered(e, element) {
-    if (enableErasing) {
-        g.removeChild(element);
-        element = null;
-    }
-}
-
-function objectClick(e, element) {
-    activeObject = element;
-    element.setAttribute('style', "stroke:rgb(0,255,0);stroke-width:2");
-    updateProperties();
-}
-
-function controlPointDown(e, element, path) {
-
-    element.setAttribute('style', "stroke:purple;stroke-width:1;fill:purple;fill-opacity: 0.5");
-    movingControlPoint = true;
-    controlPoint = element;
-    activeLine = path;
-    let path_d = path.getAttribute('d').split(/([M ])/);
-    anchorX = path_d[2];
-    anchorY = path_d[4];
-    endpointX = path_d[10];
-    endpointY = path_d[12];
-    //TODO THIS FEELS REALLLLLY JANKY
-
-    activeLine.setAttribute('stroke', "green");
-}
-
-function controlPointMouseOn(e, element) {
-    if (!movingControlPoint) {
-        element.setAttribute('style', "stroke:purple;stroke-width:1;fill:purple;fill-opacity: 0.1");
-    }
-}
-
-function controlPointMouseOff(e, element) {
-    if (!movingControlPoint) {
-        element.setAttribute('style', "stroke:purple;stroke-width:1;fill:purple;fill-opacity: 0");
-    }
-}
-
 
 svgCanvas.onmousedown = function(e){
-    let virtualXY = getSvgPoint(e.offsetX, e.offsetY);
-    if (e.button === 0 && (enableDrawing || enableCurves)) {
-        //left click
-        let element;
-        if (enableDrawing) {
-            element = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-            element.setAttribute('x1', round(virtualXY.x));
-            element.setAttribute('y1', round(virtualXY.y));
-            element.setAttribute('x2', round(virtualXY.x));
-            element.setAttribute('y2', round(virtualXY.y));
-            element.setAttribute('style', "stroke:rgb(255,0,0);stroke-width:2");
-        } else if (enableCurves) {
-            element = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-            anchorX = round(virtualXY.x);
-            anchorY = round(virtualXY.y);
-            element.setAttribute('d', "M " + anchorX + " " + anchorY);
-            element.setAttribute('stroke', "blue");
-            element.setAttribute('fill', "none");
+    let virtualXY = getSvgPoint(e.offsetX, e.offsetY, svgCanvas, g);
+    let x = round(virtualXY.x, gridMultiple);
+    let y = round(virtualXY.y, gridMultiple);
 
-            const cp = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-            cp.setAttribute('r', "" + 5);
-            cp.setAttribute('style', "stroke:purple;stroke-width:1;fill:purple;fill-opacity: 0");
-            controlPoint = cp;
-            g.appendChild(cp);
-            cp.addEventListener("mousedown", function (e) {
-                controlPointDown(e, cp, element);
-            });
-            cp.addEventListener("mouseenter", function (e) {
-                controlPointMouseOn(e, cp);
-            });
-            cp.addEventListener("mouseout", function (e) {
-                controlPointMouseOff(e, cp);
-            });
-        }
-        activeLine = element;
+    if (e.button === 0 && enableDrawing) {
+        //left click
+        activeLine = new Line(x, y, x, y, "red");
         activeObject = activeLine;
-        updateProperties();
-        g.appendChild(element);
-        element.addEventListener("mouseenter", function (e) {
-            objectEntered(e, element);
-        });
-        element.addEventListener("click", function (e) {
-            objectClick(e, element);
-        });
+        //updateProperties();
         smallGrid.setAttribute('visibility', 'visible');
+    } else if (e.button === 0 && enableCurves) {
+        activeLine = new Curve(x, y, x, y, "blue");
     } else if (e.button === 1) {
         //middle click
         panZoomCanvas.enablePan();
@@ -303,92 +210,33 @@ svgCanvas.onmousedown = function(e){
 };
 
 svgCanvas.onmousemove = function(e) {
-    let virtualXY = getSvgPoint(e.offsetX, e.offsetY);
-
-    if (movingControlPoint) {
-        controlPointX = round(virtualXY.x);
-        controlPointY = round(virtualXY.y);
-
-        controlPoint.setAttribute('cx', controlPointX);
-        controlPoint.setAttribute('cy', controlPointY);
-
-        activeLine.setAttribute('d', "M" + anchorX + " " + anchorY + " Q" + controlPointX + " " + controlPointY + " " + endpointX + " " + endpointY);
-
-    } else if (activeLine != null && e.button === 0 && (enableDrawing || enableCurves)) {
-        updateProperties();
-        if (enableDrawing) {
-            activeLine.setAttributeNS(null, 'x2', round(virtualXY.x));
-            activeLine.setAttributeNS(null, 'y2', round(virtualXY.y));
-        } else if (enableCurves) {
-            endpointX = round(virtualXY.x);
-            endpointY = round(virtualXY.y);
-
-            controlPointX = (anchorX + endpointX)/2;
-            controlPointY = (anchorY + endpointY)/2;
-
-            controlPoint.setAttribute('cx', controlPointX);
-            controlPoint.setAttribute('cy', controlPointY);
-
-            activeLine.setAttribute('d', "M" + anchorX + " " + anchorY + " Q" + controlPointX + " " + controlPointY + " " + endpointX + " " + endpointY);
+    let virtualXY = getSvgPoint(e.offsetX, e.offsetY, svgCanvas, g);
+    let x = round(virtualXY.x, gridMultiple);
+    let y = round(virtualXY.y, gridMultiple);
+    if (activeLine != null && e.button === 0 && (enableDrawing || enableCurves)) {
+        //updateProperties();
+        activeLine.updateEndpoint(x, y);
+        if (activeLine instanceof Curve) {
+            // TODO This is dangerous. We may not want this, because if we use this function to move
+            // TODO a set curve, then it'll be resetting the possibly set control point?
+            activeLine.resetControlPoint();
         }
     }
 };
 
 svgCanvas.onmouseup = function(e) {
-    let virtualXY = getSvgPoint(e.offsetX, e.offsetY);
-    if (movingControlPoint) {
-        controlPoint.setAttribute('cx', round(virtualXY.x));
-        controlPoint.setAttribute('cy', round(virtualXY.y));
-
-        activeLine.setAttribute('d', "M" + anchorX + " " + anchorY + " Q" + controlPointX + " " + controlPointY + " " + endpointX + " " + endpointY);
-
+    let virtualXY = getSvgPoint(e.offsetX, e.offsetY, svgCanvas, g);
+    let x = round(virtualXY.x, gridMultiple);
+    let y = round(virtualXY.y, gridMultiple);
+    if (activeLine != null && e.button === 0 && (enableDrawing || enableCurves)) {
+        activeLine.updateEndpoint(x, y);
         activeLine = null;
-        movingControlPoint = false;
-        controlPoint.setAttribute('style', "stroke:purple;stroke-width:1;fill:purple;fill-opacity: 0");
-    } else if (activeLine != null && e.button === 0 && (enableDrawing || enableCurves)) {
-        if (enableDrawing) {
-            activeLine.setAttributeNS(null, 'x2', round(virtualXY.x));
-            activeLine.setAttributeNS(null, 'y2', round(virtualXY.y));
-        } else if (enableCurves) {
-            endpointX = round(virtualXY.x);
-            endpointY = round(virtualXY.y);
-
-            controlPointX = (anchorX + endpointX)/2;
-            controlPointY = (anchorY + endpointY)/2;
-
-            controlPoint.setAttribute('cx', controlPointX);
-            controlPoint.setAttribute('cy', controlPointY);
-
-            activeLine.setAttribute('d', "M" + anchorX + " " + anchorY + " Q" + controlPointX + " " + controlPointY + " " + endpointX + " " + endpointY);
-        }
-        activeLine = null;
-        updateProperties();
+        //updateProperties();
         smallGrid.setAttribute('visibility', 'hidden');
     } else if (e.button === 1) {
         panZoomCanvas.disablePan();
     }
 };
-
-
-/**
- * Transforms 'regular' coordinates into virtual SVG coordinates.
- * Beware, svgCanvas and g are hardcoded in.
- * This may cause issues in a future situation I'm not currently forseeing (as of 5/26/19).
- * If it is an issue, I'd imagine you could pass both the SVG and the G in as parameters and be no big deal.
- * @param x "Real" Screen X coordinate
- * @param y "Real" Screen Y coordinate
- * @returns svgDropPoint a DOM with a "Virtual" SVG X and Y attached.
- */
-function getSvgPoint(x, y) {
-    let svgDropPoint = svgCanvas.createSVGPoint();
-
-    svgDropPoint.x = x;
-    svgDropPoint.y = y;
-
-    svgDropPoint = svgDropPoint.matrixTransform(g.getCTM().inverse());
-    return svgDropPoint;
-}
-
 
 
 ipcRenderer.on('item:add', function(){
@@ -409,3 +257,41 @@ ipcRenderer.on('item:clear', function(){
     ul.className = '';
 });
 */
+
+
+
+
+
+
+
+
+
+// TODO REFACTOR THESE PLEASE FOR THE LOVE OF GOD
+
+function round(num, gridMultiple) {
+    if (num % gridMultiple === 0) {
+        return num
+    } else if (num % gridMultiple < gridMultiple/2) {
+        return num - (num % gridMultiple);
+    } else {
+        return num + (gridMultiple - num % gridMultiple);
+    }
+}
+
+/**
+ * Transforms 'regular' coordinates into virtual SVG coordinates.
+ * @param x "Real" Screen X coordinate
+ * @param y "Real" Screen Y coordinate
+ * @param svgCanvas Canvas to manipulate point on
+ * @param g SVG G object containing the transformation
+ * @returns svgDropPoint a DOM with a "Virtual" SVG X and Y attached.
+ */
+function getSvgPoint(x, y, svgCanvas, g) {
+    let svgDropPoint = svgCanvas.createSVGPoint();
+
+    svgDropPoint.x = x;
+    svgDropPoint.y = y;
+
+    svgDropPoint = svgDropPoint.matrixTransform(g.getCTM().inverse());
+    return svgDropPoint;
+}

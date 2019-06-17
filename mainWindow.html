@@ -10,10 +10,11 @@
         <div id="toolbox" style="background: green; grid-area: 1 / 1 / 3 / 2">
             <button id="createNew">Create New</button>
             <label for="gridCheckbox">Grid</label><input type="checkbox" id="gridCheckbox" onclick="gridCheckboxClick()">
-            <label for="drawLineCheckbox">Draw</label><input type="checkbox" id="drawLineCheckbox" onclick="drawLineCheckboxClick()">
-            <label for="eraseLineCheckbox">Erase</label><input type="checkbox" id="eraseLineCheckbox" onclick="eraseLineCheckboxClick()">
-            <label for="selectToolCheckbox">Select</label><input type="checkbox" id="selectToolCheckbox" onclick="selectToolCheckboxClick()">
-            <label for="curveToolCheckbox">Curve</label><input type="checkbox" id="curveToolCheckbox" onclick="curveToolCheckboxClick()">
+
+            <input type="radio" name="toolSelect" value="line" onclick="toolSelect(this.value)" id="lineCheck"><label for="lineCheck">Draw</label>
+            <input type="radio" name="toolSelect" value="erase" onclick="toolSelect(this.value)" id="eraseCheck"><label for="eraseCheck">Erase</label>
+            <input type="radio" name="toolSelect" value="select" onclick="toolSelect(this.value)" id="selectCheck"><label for="selectCheck">Select</label>
+            <input type="radio" name="toolSelect" value="curve" onclick="toolSelect(this.value)" id="curveCheck"><label for="curveCheck">Curve</label>
         </div>
 
         <div id="canvas" style="grid-area: 1 / 2 / 2 / 3">
@@ -44,10 +45,10 @@
         </div>
 
         <div id="timeline" style="background: lavender; grid-area: 2 / 2 / 3 / 3">
-            <button id="stopbtn">Stop</button>
-            <button id="playbtn">Play</button>
-            <button id="stepfbtn">Step Forward</button>
-            <button id="stepbbtn">Step Back</button>
+            <button id="stop_btn">Stop</button>
+            <button id="play_btn">Play</button>
+            <button id="step_f_btn">Step Forward</button>
+            <button id="step_b_btn">Step Back</button>
             <div style="padding: 20px 20px 0 20px; position: center">
                 <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="50px" style="display: block" id="timeline">
                     <pattern id="tlSmallHashes" width="160" height="50" patternUnits="userSpaceOnUse">
@@ -77,8 +78,24 @@
 
     </div>
 
+
+    <script>
+        const tools = {
+            SELECT: 'select',
+            ERASE: 'erase',
+            LINE: 'line',
+            CURVE: 'curve'
+        };
+
+        let currentTool = null;
+        function toolSelect(tool){
+            currentTool = tool;
+        }
+    </script>
+
     <script src="node_modules/svg-pan-zoom/dist/svg-pan-zoom.js"></script>
     <script src="helper.js"></script>
+
     <script src="Canvas_Object.js"></script>
     <script src="Canvas_Primitive.js"></script>
     <script src="Line.js"></script>
@@ -87,8 +104,10 @@
     <script src="Prop.js"></script>
 
     <script src="timeline.js"></script>
-    <script src="behavior.js"></script>
     <script src="toolbox.js"></script>
+
+    <script src="behavior.js"></script>
+
 
 
 </body>

@@ -6,17 +6,10 @@ class Line extends Canvas_Primitive {
         super(x, y, color);
         this.endpointX = endpointX;
         this.endpointY = endpointY;
-        this.updateD();
-        this.svg.setAttribute('stroke-width', 2);
+        this.svg.setAttribute('stroke-width', "2");
     }
 
     updateD() {
-
-        if (this.endpointX === undefined && this.endpointY === undefined) {
-            this.endpointX = this.x;
-            this.endpointY = this.y;
-        }
-
         this.d = "M" + this.x + " " + this.y + " L" + this.endpointX + " " + this.endpointY;
         this.svg.setAttribute('d', this.d);
     }

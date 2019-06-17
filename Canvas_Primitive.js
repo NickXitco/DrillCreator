@@ -4,7 +4,7 @@ class Canvas_Primitive {
     d = "";
 
     color;
-    svg;
+    svg = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     visibility = true;
 
     connections;
@@ -16,7 +16,6 @@ class Canvas_Primitive {
         this.x = x;
         this.y = y;
         this.color = color;
-        this.render();
         this.svg.addEventListener("click", this.click);
     }
 
@@ -30,10 +29,15 @@ class Canvas_Primitive {
     };
 
     render() {
-        this.svg = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         this.svg.setAttribute('stroke', this.color);
         this.svg.setAttribute('fill', "none");
         this.updateD();
         this.g.appendChild(this.svg);
     };
+
+    destroy() {
+        this.g.removeChild(this.svg);
+        delete this.svg;
+        delete this;
+    }
 }

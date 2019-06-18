@@ -1,5 +1,3 @@
-/*global activeCurve*/
-
 class Curve extends Line {
     controlPointX;
     controlPointY;
@@ -16,8 +14,6 @@ class Curve extends Line {
         this.resetControlPoint();
 
         //TODO hover effects
-        this.controlPointSVG.addEventListener("mousedown", evt => this.controlPointDown(evt));
-        this.controlPointSVG.addEventListener("mouseup", evt => this.controlPointLeave(evt));
     }
 
     updateD() {
@@ -37,21 +33,19 @@ class Curve extends Line {
         this.updateControlPoint((this.x + this.endpointX) / 2, (this.y + this.endpointY) / 2);
     }
 
-    //TODO figure out how to properly reference the variable from behavior.js
-    controlPointDown() {
-        if(activeCurve == null) {
-            activeCurve = this;
-        }
-    }
-
-    controlPointLeave() {
-        activeCurve = null;
-        this.controlPointSVG.setAttribute('style', "stroke:purple;stroke-width:1;fill:purple;fill-opacity: 0");
-    }
-
     destroy() {
         super.destroy();
         this.g.removeChild(this.controlPointSVG);
         delete this.controlPointSVG;
+    }
+
+    hideControlPoint() {
+        this.controlPointSVG.removeAttribute('id');
+        this.controlPointSVG.setAttribute('visibility', "hidden");
+    }
+
+    setActiveControlPoint() {
+        this.controlPointSVG.setAttribute('id', "activeControlPoint");
+        this.controlPointSVG.setAttribute('visibility', "visible");
     }
 }

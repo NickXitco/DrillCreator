@@ -18,8 +18,9 @@ const g = document.querySelector('#svgG');
 
 const gridCheckbox = document.querySelector('#gridCheckbox');
 
-let activeLine = null;
-let activeCurve = null;
+let activeDrawing = null;
+let selectedLine = null;
+let movingControlPoint = false;
 
 let gridMultiple = 1;
 
@@ -30,44 +31,27 @@ panZoomCanvas.zoom(2);
 panZoomCanvas.center();
 
 
-/* TODO Control Point Selection
-
- So the current plan is this:
-
- No more event listeners in the classes. The only reason you should have functions in the classes is if the function
- changes something INSIDE THE CLASS, called from (likely) OUTSIDE THE CLASS.
- Style changes, that shit, fine, works perfect.
-
- Therefore. In order to do event listeners in the sense that we want to react with these objects on the canvas scale,
- we are going to do everything in this file through mousedown, mousemove, mouseup listeners, and getting the target with
- e.
-
- So, here's my thinking on using control points:
-    1. On click on a curve, we "select" the curve.
-    2. We then generate the control point, or make it visible at least.
-    3. We then listen for the mouse down on/in that control point AND ONLY that control point (through IDs or something)
-       and then do the same thing we've been doing.
- */
-
+/*WE WILL need to eventually distinguish primitives from objects, probably based on editing mode.*/
 
 svgCanvas.onmousedown = function(e){
     let {x, y} = virtualRoundedXY(e);
 
     if (e.button === 0 && (currentTool === tools.LINE || currentTool === tools.CURVE)) {
         //left click
-        let id = Util.emptySlot(primitives);
         if (currentTool === tools.LINE) {
-            activeLine = new Line(x, y, x, y, "red");
+            activeDrawing = new Line(x, y, x, y, "red");
         } else if (currentTool === tools.CURVE) {
-            activeLine = new Curve(x, y, x, y, "blue");
+            activeDrawing = new Curve(x, y, x, y, "blue");
         }
-        activeLine.render();
-        primitives[id] = activeLine;
+        activeDrawing.render();
         smallGrid.setAttribute('visibility', 'visible');
-    } else if (e.button === 0) {
-        console.log(e.target.id);
-        if  (e.target.id !== "gridRect" && e.target.id !== "svgMain") {
-            console.log(e.target);
+    } else if (e.button === 0 && (currentTool === tools.SELECT)) {
+        if (e.target.id === "activeControlPoint") {
+            movingControlPoint = true;
+        } else if (e.target.id !== "gridRect" && e.target.id !== "svgMain") {
+            selectPrimitive(e);
+        } else if (selectedLine != null) {
+            deselectPrimitive();
         }
     } else if (e.button === 1) {
         //middle click
@@ -77,29 +61,45 @@ svgCanvas.onmousedown = function(e){
 
 svgCanvas.onmousemove = function(e) {
     let {x, y} = virtualRoundedXY(e);
-    if (activeLine != null && e.button === 0 && (currentTool === tools.LINE || currentTool === tools.CURVE)) {
-        activeLine.updateEndpoint(x, y);
-        if (activeLine instanceof Curve) {
-            // TODO This is dangerous. We may not want this, because if we use this function to move
-            // TODO a set curve, then it'll be resetting the possibly set control point?
-            activeLine.resetControlPoint();
+    if (activeDrawing != null && e.button === 0 && (currentTool === tools.LINE || currentTool === tools.CURVE)) {
+        activeDrawing.updateEndpoint(x, y);
+        if (activeDrawing instanceof Curve) {
+            activeDrawing.resetControlPoint(); //While drawing a curve we want to keep the control point in the center of the line
         }
-    } else if (activeCurve != null) {
-        activeCurve.updateControlPoint(x, y);
+    } else if (currentTool === tools.SELECT) {
+        if (movingControlPoint) {
+            selectedLine.updateControlPoint(x, y);
+        }
     }
 };
 
 svgCanvas.onmouseup = function(e) {
     let {x, y} = virtualRoundedXY(e);
-    if (activeLine != null && e.button === 0 && (currentTool === tools.LINE || currentTool === tools.CURVE)) {
-        activeLine.updateEndpoint(x, y);
-        activeLine = null;
+    if (activeDrawing != null && e.button === 0 && (currentTool === tools.LINE || currentTool === tools.CURVE)) {
+        activeDrawing.updateEndpoint(x, y);
+        if (activeDrawing.getLength() < 5) {
+            activeDrawing.destroy(); //Destroy lines that are too short
+        } else {
+            let id = Util.emptySlot(primitives);
+            activeDrawing.setID(id);
+            primitives[id] = activeDrawing;
+        }
+
+        if (activeDrawing instanceof Curve) {
+            activeDrawing.hideControlPoint();
+        }
+        activeDrawing = null;
         smallGrid.setAttribute('visibility', 'hidden');
-        //TODO if line length = 0 (x1 = x2, y1= y2), destroy object.
+    } else if (e.button === 0 && currentTool === tools.SELECT) {
+        if (movingControlPoint) {
+            selectedLine.updateControlPoint(x, y);
+            movingControlPoint = false;
+        }
     } else if (e.button === 1) {
         panZoomCanvas.disablePan();
     }
 };
+
 
 function virtualRoundedXY(e) {
     let virtualXY = Util.getSvgPoint(e.offsetX, e.offsetY, svgCanvas, g);
@@ -137,6 +137,32 @@ function gridCheckboxClick() {
     }
 }
 
+function selectPrimitive(e) {
+    if (selectedLine !== primitives[parseInt(e.target.id)]) {
+        if (selectedLine != null) {
+            deselectPrimitive();
+        }
+        selectedLine = primitives[parseInt(e.target.id)];
+        selectedLine.highlightOn();
+        if (selectedLine instanceof Curve) {
+            selectedLine.setActiveControlPoint();
+        }
+    }
+    updatePropertyFields(selectedLine);
+}
+
+function deselectPrimitive() {
+    if (selectedLine != null) {
+        if (selectedLine instanceof Curve) {
+            selectedLine.hideControlPoint();
+        }
+        selectedLine.highlightOff();
+        selectedLine = null;
+    }
+    updatePropertyFields(selectedLine);
+}
+
+
 ipcRenderer.on('item:add', function(){
     //New Item
     const element = document.createElementNS('http://www.w3.org/2000/svg', "circle");
@@ -147,3 +173,4 @@ ipcRenderer.on('item:add', function(){
     element.setAttribute('fill', "none");
     g.appendChild(element);
 });
+

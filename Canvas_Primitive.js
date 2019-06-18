@@ -1,4 +1,5 @@
 class Canvas_Primitive {
+    id;
     x;
     y;
     d = "";
@@ -10,7 +11,7 @@ class Canvas_Primitive {
     connections;
 
     g = document.querySelector('#svgG');
-    canvas = document.querySelector('#svgMain')
+    canvas = document.querySelector('#svgMain');
 
     constructor(x, y, color) {
         this.x = x;
@@ -19,14 +20,9 @@ class Canvas_Primitive {
         this.svg.addEventListener("click", this.click);
     }
 
-    click(){
-        this.visibility = false;
-        console.log("You CLICKED MEEEE.")
-    }
+    click(){};
 
-    updateD(){
-        console.log("This shouldn't have been called.");
-    };
+    updateD(){};
 
     render() {
         this.svg.setAttribute('stroke', this.color);
@@ -40,4 +36,13 @@ class Canvas_Primitive {
         delete this.svg;
         delete this;
     }
+
+    setID(id) {
+        this.id = id;
+        this.svg.setAttribute('id', id);
+    }
+
+    highlightOn() {};
+
+    highlightOff() {};
 }

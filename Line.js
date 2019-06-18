@@ -30,4 +30,16 @@ class Line extends Canvas_Primitive {
         this.y = y;
         this.updateD()
     }
+
+    getLength() {
+        return Math.sqrt(Math.pow(this.x - this.endpointX,2) + Math.pow(this.y - this.endpointY,2));
+    }
+
+    highlightOn() {
+        this.svg.setAttribute('stroke', "green");
+    }
+
+    highlightOff() {
+        this.svg.setAttribute('stroke', this.color);
+    }
 }

@@ -3,7 +3,6 @@ class Curve extends Line {
     controlPointY;
 
     controlPointSVG;
-    //controlPointVisible = true;
 
     constructor (x, y, endpointX, endpointY, color) {
         super(x, y, endpointX, endpointY, color);
@@ -47,5 +46,10 @@ class Curve extends Line {
     setActiveControlPoint() {
         this.controlPointSVG.setAttribute('id', "activeControlPoint");
         this.controlPointSVG.setAttribute('visibility', "visible");
+    }
+
+    selectShift(x, y) {
+        this.updateControlPoint(this.controlPointX + x, this.controlPointY + y);
+        super.selectShift(x, y);
     }
 }

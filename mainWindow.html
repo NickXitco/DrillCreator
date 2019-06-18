@@ -55,8 +55,8 @@
             <button id="step_b_btn">Step Back</button>
             <div style="padding: 20px 20px 0 20px; position: center">
                 <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="50px" style="display: block" id="timeline">
-                    <pattern id="tlSmallHashes" width="160" height="50" patternUnits="userSpaceOnUse">
-                            <line x1="000" y1="50" x2="000" y2="00" stroke="gray" stroke-width="1"></line>
+                    <pattern id="tlHashes" width="160" height="50" patternUnits="userSpaceOnUse" patternTransform="scale(1, 1)">
+                            <line x1="000" y1="50" x2="000" y2="00" stroke="gray" stroke-width="2"></line>
                             <line x1="010" y1="50" x2="010" y2="25" stroke="gray" stroke-width="1"></line>
                             <line x1="020" y1="50" x2="020" y2="25" stroke="gray" stroke-width="1"></line>
                             <line x1="030" y1="50" x2="030" y2="25" stroke="gray" stroke-width="1"></line>
@@ -74,7 +74,7 @@
                             <line x1="150" y1="50" x2="150" y2="25" stroke="gray" stroke-width="1"></line>
                     </pattern>
 
-                    <rect width="100%" height="100%" fill="url(#tlSmallHashes)" stroke="black" stroke-width="2.5"></rect>
+                    <rect width="100%" height="100%" fill="url(#tlHashes)" stroke="black" stroke-width="2.5"></rect>
                     <path d="M55 10 l -5 -5 v -5 h 10 v 5 l -5 5 v 40" stroke="blue" fill="white" stroke-width="3" id="playhead"></path>
                 </svg>
             </div>
@@ -90,6 +90,16 @@
             LINE: 'line',
             CURVE: 'curve'
         };
+
+        const svgCanvas = document.querySelector('#svgMain');
+        const canvasDiv = document.querySelector('#canvas');
+
+        const smallGrid = document.querySelector('#smallGrid');
+        const gridRect = document.querySelector('#gridRect');
+
+        const g = document.querySelector('#svgG');
+
+        const gridCheckbox = document.querySelector('#gridCheckbox');
 
         const labelField = document.getElementById("label");
         const x1Field = document.getElementById("activeX1");

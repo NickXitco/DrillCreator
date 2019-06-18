@@ -8,19 +8,13 @@ function openNewItemDialog() {
     ipcRenderer.send('new:open');
 }
 
-const svgCanvas = document.querySelector('#svgMain');
-const canvasDiv = document.querySelector('#canvas');
-
-const smallGrid = document.querySelector('#smallGrid');
-const gridRect = document.querySelector('#gridRect');
-
-const g = document.querySelector('#svgG');
-
-const gridCheckbox = document.querySelector('#gridCheckbox');
+let downX;
+let downY;
 
 let activeDrawing = null;
 let selectedLine = null;
 let movingControlPoint = false;
+let movingPrimitive = false;
 
 let gridMultiple = 1;
 
@@ -50,6 +44,10 @@ svgCanvas.onmousedown = function(e){
             movingControlPoint = true;
         } else if (e.target.id !== "gridRect" && e.target.id !== "svgMain") {
             selectPrimitive(e);
+            downX = x;
+            downY = y;
+            console.log(downX + ", " + downY);
+            movingPrimitive = true;
         } else if (selectedLine != null) {
             deselectPrimitive();
         }
@@ -70,7 +68,14 @@ svgCanvas.onmousemove = function(e) {
         if (movingControlPoint) {
             selectedLine.updateControlPoint(x, y);
         }
+        if (movingPrimitive) {
+            selectedLine.selectShift(x - downX, y - downY);
+            downX = x;
+            downY = y;
+        }
+        updatePropertyFields(selectedLine);
     }
+
 };
 
 svgCanvas.onmouseup = function(e) {
@@ -95,6 +100,7 @@ svgCanvas.onmouseup = function(e) {
             selectedLine.updateControlPoint(x, y);
             movingControlPoint = false;
         }
+        movingPrimitive = false;
     } else if (e.button === 1) {
         panZoomCanvas.disablePan();
     }

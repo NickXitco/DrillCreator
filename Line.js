@@ -42,4 +42,12 @@ class Line extends Canvas_Primitive {
     highlightOff() {
         this.svg.setAttribute('stroke', this.color);
     }
+
+    selectShift(x, y) {
+        this.x += x;
+        this.y += y;
+        this.endpointX += x;
+        this.endpointY += y;
+        this.updateD();
+    }
 }

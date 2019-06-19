@@ -2,13 +2,12 @@ class Curve extends Line {
     controlPointX;
     controlPointY;
 
-    controlPointSVG;
+    controlPointSVG = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
 
     constructor (x, y, endpointX, endpointY, color) {
         super(x, y, endpointX, endpointY, color);
-        this.controlPointSVG = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
         this.controlPointSVG.setAttribute('r', 5);
-        this.controlPointSVG.setAttribute('style', "stroke:purple;stroke-width:1;fill:purple;fill-opacity: 0");
+        this.controlPointSVG.setAttribute('style', "stroke:purple;stroke-width:1;fill:purple;fill-opacity: 0.5");
         this.g.appendChild(this.controlPointSVG);
         this.resetControlPoint();
 
@@ -18,6 +17,8 @@ class Curve extends Line {
     updateD() {
         this.d = "M" + this.x + " " + this.y + " Q" + this.controlPointX + " " + this.controlPointY + " " + this.endpointX + " " + this.endpointY;
         this.svg.setAttribute('d', this.d);
+        Line.createAnchorPoint(this.anchorSVG, this.x, this.y);
+        Line.createAnchorPoint(this.endpointSVG, this.endpointX, this.endpointY);
     }
 
     updateControlPoint(x, y) {

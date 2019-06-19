@@ -16,6 +16,9 @@ let selectedLine = null;
 let movingControlPoint = false;
 let movingPrimitive = false;
 
+let movingAnchor = false;
+let movingEndpointAnchor = false;
+
 let gridMultiple = 1;
 
 let primitives = [];
@@ -31,26 +34,9 @@ svgCanvas.onmousedown = function(e){
     let {x, y} = virtualRoundedXY(e);
 
     if (e.button === 0 && (currentTool === tools.LINE || currentTool === tools.CURVE)) {
-        //left click
-        if (currentTool === tools.LINE) {
-            activeDrawing = new Line(x, y, x, y, "red");
-        } else if (currentTool === tools.CURVE) {
-            activeDrawing = new Curve(x, y, x, y, "blue");
-        }
-        activeDrawing.render();
-        smallGrid.setAttribute('visibility', 'visible');
+        drawDown(x, y);
     } else if (e.button === 0 && (currentTool === tools.SELECT)) {
-        if (e.target.id === "activeControlPoint") {
-            movingControlPoint = true;
-        } else if (e.target.id !== "gridRect" && e.target.id !== "svgMain") {
-            selectPrimitive(e);
-            downX = x;
-            downY = y;
-            console.log(downX + ", " + downY);
-            movingPrimitive = true;
-        } else if (selectedLine != null) {
-            deselectPrimitive();
-        }
+        selectDown(e, x, y);
     } else if (e.button === 1) {
         //middle click
         panZoomCanvas.enablePan();
@@ -60,20 +46,9 @@ svgCanvas.onmousedown = function(e){
 svgCanvas.onmousemove = function(e) {
     let {x, y} = virtualRoundedXY(e);
     if (activeDrawing != null && e.button === 0 && (currentTool === tools.LINE || currentTool === tools.CURVE)) {
-        activeDrawing.updateEndpoint(x, y);
-        if (activeDrawing instanceof Curve) {
-            activeDrawing.resetControlPoint(); //While drawing a curve we want to keep the control point in the center of the line
-        }
+        drawMove(x, y);
     } else if (currentTool === tools.SELECT) {
-        if (movingControlPoint) {
-            selectedLine.updateControlPoint(x, y);
-        }
-        if (movingPrimitive) {
-            selectedLine.selectShift(x - downX, y - downY);
-            downX = x;
-            downY = y;
-        }
-        updatePropertyFields(selectedLine);
+        selectMove(x, y);
     }
 
 };
@@ -81,26 +56,9 @@ svgCanvas.onmousemove = function(e) {
 svgCanvas.onmouseup = function(e) {
     let {x, y} = virtualRoundedXY(e);
     if (activeDrawing != null && e.button === 0 && (currentTool === tools.LINE || currentTool === tools.CURVE)) {
-        activeDrawing.updateEndpoint(x, y);
-        if (activeDrawing.getLength() < 5) {
-            activeDrawing.destroy(); //Destroy lines that are too short
-        } else {
-            let id = Util.emptySlot(primitives);
-            activeDrawing.setID(id);
-            primitives[id] = activeDrawing;
-        }
-
-        if (activeDrawing instanceof Curve) {
-            activeDrawing.hideControlPoint();
-        }
-        activeDrawing = null;
-        smallGrid.setAttribute('visibility', 'hidden');
+        drawUp(x, y);
     } else if (e.button === 0 && currentTool === tools.SELECT) {
-        if (movingControlPoint) {
-            selectedLine.updateControlPoint(x, y);
-            movingControlPoint = false;
-        }
-        movingPrimitive = false;
+        selectUp(x, y);
     } else if (e.button === 1) {
         panZoomCanvas.disablePan();
     }
@@ -132,17 +90,6 @@ function panCheck(oldPan, newPan) {
     return customPan;
 }
 
-// noinspection JSUnusedLocalSymbols
-function gridCheckboxClick() {
-    if (gridCheckbox.checked === true) {
-        gridRect.setAttribute('visibility', 'visible');
-        gridMultiple = 10;
-    } else {
-        gridRect.setAttribute('visibility', 'hidden');
-        gridMultiple = 1;
-    }
-}
-
 function selectPrimitive(e) {
     if (selectedLine !== primitives[parseInt(e.target.id)]) {
         if (selectedLine != null) {
@@ -150,6 +97,7 @@ function selectPrimitive(e) {
         }
         selectedLine = primitives[parseInt(e.target.id)];
         selectedLine.highlightOn();
+        selectedLine.showAnchors();
         if (selectedLine instanceof Curve) {
             selectedLine.setActiveControlPoint();
         }
@@ -163,11 +111,91 @@ function deselectPrimitive() {
             selectedLine.hideControlPoint();
         }
         selectedLine.highlightOff();
+        selectedLine.hideAnchors();
         selectedLine = null;
     }
     updatePropertyFields(selectedLine);
 }
 
+function selectDown(e, x, y) {
+    if (e.target.id === "activeControlPoint") {
+        movingControlPoint = true;
+    } else if (e.target.id === "activeAnchor") {
+        movingAnchor = true;
+    } else if (e.target.id === "activeEndpointAnchor") {
+        movingEndpointAnchor = true;
+    } else if (e.target.id !== "gridRect" && e.target.id !== "svgMain") {
+        selectPrimitive(e);
+        downX = x;
+        downY = y;
+        console.log(downX + ", " + downY);
+        movingPrimitive = true;
+    } else if (selectedLine != null) {
+        deselectPrimitive();
+    }
+}
+
+function selectMove(x, y) {
+    if (movingControlPoint) {
+        selectedLine.updateControlPoint(x, y);
+    } else if (movingAnchor) {
+        selectedLine.updateAnchor(x, y);
+    } else if (movingEndpointAnchor) {
+        selectedLine.updateEndpoint(x, y);
+    } else if (movingPrimitive) {
+        selectedLine.selectShift(x - downX, y - downY);
+        downX = x;
+        downY = y;
+    }
+    updatePropertyFields(selectedLine);
+}
+
+function selectUp(x, y) {
+    if (movingControlPoint) {
+        selectedLine.updateControlPoint(x, y);
+        movingControlPoint = false;
+    } else if (movingAnchor) {
+        movingAnchor = false;
+    } else if (movingEndpointAnchor) {
+        movingEndpointAnchor = false;
+    }
+    movingPrimitive = false;
+}
+
+function drawDown(x, y) {
+    if (currentTool === tools.LINE) {
+        activeDrawing = new Line(x, y, x, y, "red");
+    } else if (currentTool === tools.CURVE) {
+        activeDrawing = new Curve(x, y, x, y, "blue");
+    }
+    activeDrawing.render();
+    activeDrawing.renderAnchors();
+    smallGrid.setAttribute('visibility', 'visible');
+}
+
+function drawMove(x, y) {
+    activeDrawing.updateEndpoint(x, y);
+    if (activeDrawing instanceof Curve) {
+        activeDrawing.resetControlPoint(); //While drawing a curve we want to keep the control point in the center of the line
+    }
+}
+
+function drawUp(x, y) {
+    activeDrawing.updateEndpoint(x, y);
+    if (activeDrawing.getLength() < 5) {
+        activeDrawing.destroy(); //Destroy lines that are too short
+    } else {
+        let id = Util.emptySlot(primitives);
+        activeDrawing.setID(id);
+        primitives[id] = activeDrawing;
+    }
+    if (activeDrawing instanceof Curve) {
+        activeDrawing.hideControlPoint();
+    }
+    activeDrawing.hideAnchors();
+    activeDrawing = null;
+    smallGrid.setAttribute('visibility', 'hidden');
+}
 
 ipcRenderer.on('item:add', function(){
     //New Item

@@ -1,12 +1,14 @@
 const electron = require('electron');
 const {ipcRenderer} = electron;
 
+
 const createNewButton = document.querySelector('#createNew');
 createNewButton.addEventListener('click', openNewItemDialog);
 
 function openNewItemDialog() {
     ipcRenderer.send('new:open');
 }
+
 
 let downX;
 let downY;
@@ -91,11 +93,11 @@ function panCheck(oldPan, newPan) {
 }
 
 function selectPrimitive(e) {
-    if (selectedLine !== primitives[parseInt(e.target.id)]) {
+    if (selectedLine !== $(e.target).data().self) {
         if (selectedLine != null) {
             deselectPrimitive();
         }
-        selectedLine = primitives[parseInt(e.target.id)];
+        selectedLine = $(e.target).data().self;
         selectedLine.highlightOn();
         selectedLine.showAnchors();
         if (selectedLine instanceof Curve) {
@@ -128,7 +130,6 @@ function selectDown(e, x, y) {
         selectPrimitive(e);
         downX = x;
         downY = y;
-        console.log(downX + ", " + downY);
         movingPrimitive = true;
     } else if (selectedLine != null) {
         deselectPrimitive();

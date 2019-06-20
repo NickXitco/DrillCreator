@@ -86,6 +86,7 @@ function zoomPZCS(x) {
     //TODO cap zoom
     pattern.setAttribute('patternTransform', "scale("+ timelineZoom + ", 1) translate(" + -timelinePosition + ")");
     //TODO lock playhead to this transformation as well..... somehow
+    //playheads horizontal movement should be correlated to the zoom factor in that: zoomed out=smaller movement, zoomedin=larger movement.
 }
 
 function shiftPZCS(x) {

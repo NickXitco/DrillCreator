@@ -49,6 +49,7 @@ class Line extends Canvas_Primitive {
     updateD() {
         this.d = "M" + this.x + " " + this.y + " L" + this.endpointX + " " + this.endpointY;
         this.svg.setAttribute('d', this.d);
+        this.expandedSVG.setAttribute('d', this.d);
         Line.createAnchorPoint(this.anchorSVG, this.x, this.y);
         Line.createAnchorPoint(this.endpointSVG, this.endpointX, this.endpointY);
     }
@@ -88,5 +89,11 @@ class Line extends Canvas_Primitive {
         this.endpointX += x;
         this.endpointY += y;
         this.updateD();
+    }
+
+    destroy() {
+        this.g.removeChild(this.anchorSVG);
+        this.g.removeChild(this.endpointSVG);
+        super.destroy();
     }
 }

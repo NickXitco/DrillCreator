@@ -48,7 +48,7 @@
             </ul>
         </div>
 
-        <div id="timeline" style="background: lavender; grid-area: 2 / 2 / 3 / 3">
+        <div id="timelineDiv" style="background: lavender; grid-area: 2 / 2 / 3 / 3">
             <button id="stop_btn">Stop</button>
             <button id="play_btn">Play</button>
             <button id="step_f_btn">Step Forward</button>
@@ -107,6 +107,8 @@
         const barPanZoom = document.getElementById("barPanZoom");
         const leftPanZoomHandle = document.getElementById("leftPanZoomHandle");
         const rightPanZoomHandle = document.getElementById("rightPanZoomHandle");
+        const timelineDiv = document.getElementById("timelineDiv");
+
 
         const svgCanvas = document.querySelector('#svgMain');
         const canvasDiv = document.querySelector('#canvas');

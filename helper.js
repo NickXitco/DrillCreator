@@ -1,5 +1,8 @@
 class Util {
     static round(num, gridMultiple) {
+        if (gridMultiple === 0) {
+            return num;
+        }
         if (num % gridMultiple === 0) {
             return num
         } else if (num % gridMultiple < gridMultiple/2) {
@@ -35,5 +38,11 @@ class Util {
         }
         return array.length;
     }
-    
+
+    static distance(x1, x2, y1, y2){
+        if(!x2) x2=0;
+        if(!y2) y2=0;
+        return Math.sqrt( Math.pow((x1-x2), 2) + Math.pow((y1-y2), 2) );
+    }
+
 }

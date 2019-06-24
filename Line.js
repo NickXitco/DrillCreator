@@ -2,6 +2,9 @@ class Line extends Canvas_Primitive {
     endpointX;
     endpointY;
 
+    centerX;
+    centerY;
+
     anchorSVG = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
     endpointSVG = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
 
@@ -52,6 +55,7 @@ class Line extends Canvas_Primitive {
         this.expandedSVG.setAttribute('d', this.d);
         Line.createAnchorPoint(this.anchorSVG, this.x, this.y);
         Line.createAnchorPoint(this.endpointSVG, this.endpointX, this.endpointY);
+        this.updateCenter();
     }
 
     setColor(color) {
@@ -62,13 +66,13 @@ class Line extends Canvas_Primitive {
     updateEndpoint(x, y) {
         this.endpointX = x;
         this.endpointY = y;
-        this.updateD()
+        this.updateD();
     }
 
     updateAnchor(x, y) {
         this.x = x;
         this.y = y;
-        this.updateD()
+        this.updateD();
     }
 
     getLength() {
@@ -95,5 +99,11 @@ class Line extends Canvas_Primitive {
         this.g.removeChild(this.anchorSVG);
         this.g.removeChild(this.endpointSVG);
         super.destroy();
+    }
+
+
+    updateCenter() {
+        this.centerX = (this.x + this.endpointX) / 2;
+        this.centerY = (this.y + this.endpointY) / 2;
     }
 }

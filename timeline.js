@@ -7,8 +7,6 @@ let playhead_downX;
 
 const baselineZoom = 4;
 
-let clientWidth = timeline.clientWidth;
-
 let timelineLength = 900;
 let timelineZoom = baselineZoom;
 let scrollbarLeft = 0;

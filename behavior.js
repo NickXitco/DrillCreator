@@ -104,6 +104,7 @@ function selectPrimitive(e) {
             selectedLine.setActiveControlPoint();
         }
     }
+    console.log({x: selectedLine.centerX, y: selectedLine.centerY});
     updatePropertyFields(selectedLine);
 }
 
@@ -141,14 +142,50 @@ function selectMove(x, y) {
         selectedLine.updateControlPoint(x, y);
     } else if (movingAnchor) {
         selectedLine.updateAnchor(x, y);
+
+        let snappedXY = pointSnap(selectedLine, true);
+        if (snappedXY !== undefined) {
+            selectedLine.updateAnchor(snappedXY.closestPoint.x, snappedXY.closestPoint.y);
+        }
+
     } else if (movingEndpointAnchor) {
         selectedLine.updateEndpoint(x, y);
+
+        let snappedXY = pointSnap(selectedLine, false);
+        if (snappedXY !== undefined) {
+            selectedLine.updateEndpoint(snappedXY.closestPoint.x, snappedXY.closestPoint.y);
+        }
+
     } else if (movingPrimitive) {
         selectedLine.selectShift(x - downX, y - downY);
         downX = x;
         downY = y;
+
+        /* TODO there's a sour problem with the shifting one here. Basically when things get snapped, they get "glued"
+        *   that is to say that in order to break the snap, you need to yank it out of the snap zone "fast" enough,
+        *   as opposed to "far" enough. You have to move the mouse more than 7 units in a single frame in order
+        *   for the glue to break, or else it will continue shifting back into place, regardless of how far you've
+        *   pulled the primitive.
+        * */
+
+
+        let snappedXY = shiftSnap(selectedLine);
+        if (snappedXY !== undefined) {
+            if (snappedXY.endpoint === 1) {
+                //snap anchor
+                selectedLine.selectShift(snappedXY.closestPoint.x - selectedLine.x, snappedXY.closestPoint.y - selectedLine.y);
+            } else {
+                //snap endpoint
+                selectedLine.selectShift(snappedXY.closestPoint.x - selectedLine.endpointX, snappedXY.closestPoint.y - selectedLine.endpointY);
+            }
+        }
     }
-    updatePropertyFields(selectedLine);
+
+    if (selectedLine === null) {
+        updateMouseFields(x, y);
+    } else {
+        updatePropertyFields(selectedLine);
+    }
 }
 
 function selectUp(x, y) {
@@ -169,6 +206,12 @@ function drawDown(x, y) {
     } else if (currentTool === tools.CURVE) {
         activeDrawing = new Curve(x, y, x, y, "blue");
     }
+
+    let snappedXY = pointSnap(activeDrawing, true);
+    if (snappedXY !== undefined) {
+        activeDrawing.updateAnchor(snappedXY.closestPoint.x, snappedXY.closestPoint.y);
+    }
+
     activeDrawing.render();
     activeDrawing.renderAnchors();
     smallGrid.setAttribute('visibility', 'visible');
@@ -176,6 +219,12 @@ function drawDown(x, y) {
 
 function drawMove(x, y) {
     activeDrawing.updateEndpoint(x, y);
+
+    let snappedXY = pointSnap(activeDrawing, false);
+    if (snappedXY !== undefined) {
+        activeDrawing.updateEndpoint(snappedXY.closestPoint.x, snappedXY.closestPoint.y);
+    }
+
     if (activeDrawing instanceof Curve) {
         activeDrawing.resetControlPoint(); //While drawing a curve we want to keep the control point in the center of the line
     }
@@ -183,6 +232,11 @@ function drawMove(x, y) {
 
 function drawUp(x, y) {
     activeDrawing.updateEndpoint(x, y);
+    let snappedXY = pointSnap(activeDrawing, false);
+    if (snappedXY !== undefined) {
+        activeDrawing.updateEndpoint(snappedXY.closestPoint.x, snappedXY.closestPoint.y);
+    }
+
     if (activeDrawing.getLength() < 5) {
         activeDrawing.destroy(); //Destroy lines that are too short
     } else {
@@ -198,6 +252,107 @@ function drawUp(x, y) {
     smallGrid.setAttribute('visibility', 'hidden');
 }
 
+
+function shiftSnap(line) {
+    let closestPoint = {x: null, y: null};
+    let closestPointDistance = Infinity;
+    let endpoint = 0; //1 for anchor, 2 for endpoint
+    for (const prim of primitives) {
+        if (prim !== line) {
+
+            if (Util.distance(line.x, prim.x, line.y, prim.y) < closestPointDistance) {
+                closestPoint.x = prim.x;
+                closestPoint.y = prim.y;
+                closestPointDistance = Util.distance(line.x, prim.x, line.y, prim.y);
+                endpoint = 1;
+            }
+
+            if (Util.distance(line.x, prim.endpointX, line.y, prim.endpointY) < closestPointDistance) {
+                closestPoint.x = prim.endpointX;
+                closestPoint.y = prim.endpointY;
+                closestPointDistance = Util.distance(line.x, prim.endpointX, line.y, prim.endpointY);
+                endpoint = 1;
+            }
+
+            if (Util.distance(line.x, prim.centerX, line.y, prim.centerY) < closestPointDistance) { // May need to add a small (+- 2) shift to closestDistance to prefer endpoints.
+                closestPoint.x = prim.centerX;
+                closestPoint.y = prim.centerY;
+                closestPointDistance = Util.distance(line.x, prim.centerX, line.y, prim.centerY);
+                endpoint = 1;
+            }
+
+            if (Util.distance(line.endpointX, prim.x, line.endpointY, prim.y) < closestPointDistance) {
+                closestPoint.x = prim.x;
+                closestPoint.y = prim.y;
+                closestPointDistance = Util.distance(line.endpointX, prim.x, line.endpointY, prim.y);
+                endpoint = 2;
+            }
+
+            if (Util.distance(line.endpointX, prim.endpointX, line.endpointY, prim.endpointY) < closestPointDistance) {
+                closestPoint.x = prim.endpointX;
+                closestPoint.y = prim.endpointY;
+                closestPointDistance = Util.distance(line.endpointX, prim.endpointX, line.endpointY, prim.endpointY);
+                endpoint = 2;
+            }
+
+            if (Util.distance(line.endpointX, prim.centerX, line.endpointY, prim.centerY) < closestPointDistance) { // May need to add a small (+- 2) shift to closestDistance to prefer endpoints.
+                closestPoint.x = prim.centerX;
+                closestPoint.y = prim.centerY;
+                closestPointDistance = Util.distance(line.endpointX, prim.centerX, line.endpointY, prim.centerY);
+                endpoint = 2;
+            }
+        }
+    }
+    if (closestPointDistance <= 7) {
+        return {closestPoint, endpoint};
+    }
+}
+
+
+function pointSnap(line, anchor) {
+    let x, y;
+    let endpoint = 0; //1 for anchor, 2 for endpoint
+    if (anchor) {
+        x = line.x;
+        y = line.y;
+        endpoint = 1;
+    } else {
+        x = line.endpointX;
+        y = line.endpointY;
+        endpoint = 2;
+    }
+    let closestPoint = {x: null, y: null};
+    let closestPointDistance = Infinity;
+
+    for (const prim of primitives) {
+        if (prim !== line) {
+
+            if (Util.distance(x, prim.x, y, prim.y) < closestPointDistance) {
+                closestPoint.x = prim.x;
+                closestPoint.y = prim.y;
+                closestPointDistance = Util.distance(x, prim.x, y, prim.y);
+            }
+
+            if (Util.distance(x, prim.endpointX, y, prim.endpointY) < closestPointDistance) {
+                closestPoint.x = prim.endpointX;
+                closestPoint.y = prim.endpointY;
+                closestPointDistance = Util.distance(x, prim.endpointX, y, prim.endpointY);
+            }
+
+            if (Util.distance(x, prim.centerX, y, prim.centerY) < closestPointDistance) { // May need to add a small (+- 2) shift to closestDistance to prefer endpoints.
+                closestPoint.x = prim.centerX;
+                closestPoint.y = prim.centerY;
+                closestPointDistance = Util.distance(x, prim.centerX, y, prim.centerY);
+            }
+        }
+    }
+    if (closestPointDistance <= 7) {
+        return {closestPoint, endpoint};
+    }
+}
+
+
+
 ipcRenderer.on('item:add', function(){
     //New Item
     const element = document.createElementNS('http://www.w3.org/2000/svg', "circle");
@@ -208,4 +363,3 @@ ipcRenderer.on('item:add', function(){
     element.setAttribute('fill', "none");
     g.appendChild(element);
 });
-

@@ -25,6 +25,8 @@ let gridMultiple = 1;
 
 let primitives = [];
 
+let pointsOfInterest = [];
+
 let panZoomCanvas = svgPanZoom('#svgMain', {panEnabled: false, beforePan: panCheck, controlIconsEnabled: false, minZoom: 1, dblClickZoomEnabled: false, });
 panZoomCanvas.zoom(2);
 panZoomCanvas.center();
@@ -197,6 +199,10 @@ function selectUp(x, y) {
     } else if (movingEndpointAnchor) {
         movingEndpointAnchor = false;
     }
+
+    if (selectedLine !==  null) {
+        checkIntersections(selectedLine, false);
+    }
     movingPrimitive = false;
 }
 
@@ -212,6 +218,7 @@ function drawDown(x, y) {
         activeDrawing.updateAnchor(snappedXY.closestPoint.x, snappedXY.closestPoint.y);
     }
 
+    checkIntersections(activeDrawing, true);
     activeDrawing.render();
     activeDrawing.renderAnchors();
     smallGrid.setAttribute('visibility', 'visible');
@@ -243,6 +250,7 @@ function drawUp(x, y) {
         let id = Util.emptySlot(primitives);
         activeDrawing.setID(id);
         primitives[id] = activeDrawing;
+        checkIntersections(activeDrawing, false);
     }
     if (activeDrawing instanceof Curve) {
         activeDrawing.hideControlPoint();
@@ -352,6 +360,72 @@ function pointSnap(line, anchor) {
 }
 
 
+function checkIntersections(primitive, newLine) {
+    for (const other of primitives) {
+        if (other !== primitive) {
+            if (primitive.x === other.x && primitive.y === other.y) {
+                addPointOfInterest(primitive.x, primitive.y, primitive);
+                addPointOfInterest(primitive.x, primitive.y, other);
+            }
+
+            if (primitive.x === other.endpointX && primitive.y === other.endpointY) {
+                addPointOfInterest(primitive.x, primitive.y, primitive);
+                addPointOfInterest(primitive.x, primitive.y, other);
+            }
+
+            if (!newLine){
+                if (primitive.endpointX === other.x && primitive.endpointY === other.y) {
+                    addPointOfInterest(primitive.endpointX, primitive.endpointY, primitive);
+                    addPointOfInterest(primitive.endpointX, primitive.endpointY, other);
+                }
+
+                if (primitive.endpointX === other.endpointX && primitive.endpointY === other.endpointY) {
+                    addPointOfInterest(primitive.endpointX, primitive.endpointY, primitive);
+                    addPointOfInterest(primitive.endpointX, primitive.endpointY, other);
+                }
+            }
+
+        }
+    }
+    updateRegions();
+}
+
+
+function addPointOfInterest(x, y, prim) {
+    for (const point of pointsOfInterest) {
+        if (point.x === x && point.y === y) {
+            point.primitives.add(prim);
+            return;
+        }
+    }
+
+    let newPoi = new POI(x, y);
+    newPoi.primitives.add(prim);
+    pointsOfInterest.push(newPoi);
+}
+
+
+
+
+function addNeighbors() {
+    for (const point of pointsOfInterest) {
+        for (const other_point of pointsOfInterest) {
+            if (other_point !== point) {
+                for (const prim of point.primitives) {
+                    if (other_point.primitives.has(prim)) {
+                        point.neighbors.add(other_point);
+                    }
+                }
+            }
+        }
+    }
+}
+
+function updateRegions() {
+    addNeighbors();
+    //Search for cycles!
+    console.log(pointsOfInterest);
+}
 
 ipcRenderer.on('item:add', function(){
     //New Item

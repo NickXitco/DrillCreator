@@ -10,8 +10,6 @@ class Canvas_Primitive {
     expandedSVG = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     visibility = true;
 
-    connections;
-
     g = document.querySelector('#svgG');
 
     constructor(x, y, color) {

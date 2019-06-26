@@ -448,7 +448,12 @@ function updateEdges(point) {
 }
 
 function updateRegions(point) {
+    console.log(point);
+    console.log(pointsOfInterest);
     addNeighbors(point);
+    for (const neighbor of point.neighbors) {
+        addNeighbors(neighbor);
+    }
     updateEdges(point);
     findShortestSelfCycle(point);
 }

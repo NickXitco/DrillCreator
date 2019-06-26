@@ -374,37 +374,39 @@ function checkIntersections(primitive, newLine) {
         if (other !== primitive) {
             if (primitive.x === other.x && primitive.y === other.y) {
                 addPointOfInterest(primitive.x, primitive.y, primitive);
-                addPointOfInterest(primitive.x, primitive.y, other);
+                let point = addPointOfInterest(primitive.x, primitive.y, other);
+                updateRegions(point);
             }
 
             if (primitive.x === other.endpointX && primitive.y === other.endpointY) {
                 addPointOfInterest(primitive.x, primitive.y, primitive);
-                addPointOfInterest(primitive.x, primitive.y, other);
+                let point = addPointOfInterest(primitive.x, primitive.y, other);
+                updateRegions(point);
             }
 
             if (!newLine){
                 if (primitive.endpointX === other.x && primitive.endpointY === other.y) {
                     addPointOfInterest(primitive.endpointX, primitive.endpointY, primitive);
-                    addPointOfInterest(primitive.endpointX, primitive.endpointY, other);
+                    let point = addPointOfInterest(primitive.endpointX, primitive.endpointY, other);
+                    updateRegions(point);
                 }
 
                 if (primitive.endpointX === other.endpointX && primitive.endpointY === other.endpointY) {
                     addPointOfInterest(primitive.endpointX, primitive.endpointY, primitive);
-                    addPointOfInterest(primitive.endpointX, primitive.endpointY, other);
+                    let point = addPointOfInterest(primitive.endpointX, primitive.endpointY, other);
+                    updateRegions(point);
                 }
             }
 
         }
     }
-    //TODO this is SUPER wasteful. We only need to update regions if a point is made AND only need to update on that point.
-    updateRegions();
 }
 
 function addPointOfInterest(x, y, prim) {
     for (const point of pointsOfInterest) {
         if (point.x === x && point.y === y) {
             point.primitives.add(prim);
-            return;
+            return point;
         }
     }
     let newPoi = new POI(x, y);
@@ -412,49 +414,43 @@ function addPointOfInterest(x, y, prim) {
     poiIDCounter += 1;
     newPoi.primitives.add(prim);
     pointsOfInterest.push(newPoi);
+    return newPoi;
 }
 
-function addNeighbors() {
-    for (const point of pointsOfInterest) {
-        for (const other_point of pointsOfInterest) {
-            if (other_point !== point) {
-                for (const prim of point.primitives) {
-                    if (other_point.primitives.has(prim)) {
-                        point.neighbors.add(other_point);
-                    }
+function addNeighbors(point) {
+    for (const other_point of pointsOfInterest) {
+        if (other_point !== point) {
+            for (const prim of point.primitives) {
+                if (other_point.primitives.has(prim)) {
+                    point.neighbors.add(other_point);
                 }
             }
         }
     }
 }
 
-function updateEdges() {
-    for (const point of pointsOfInterest) {
-        for (const endpoint of point.neighbors) {
-            let found = false;
-            for (const edge of edges) {
-                if (edge[0].id === point.id && edge[1].id === endpoint.id) {
-                    found = true;
-                    break;
-                } else if (edge[0].id === endpoint.id && edge[1].id === point.id) {
-                    found = true;
-                    break;
-                }
+function updateEdges(point) {
+    for (const endpoint of point.neighbors) {
+        let found = false;
+        for (const edge of edges) {
+            if (edge[0].id === point.id && edge[1].id === endpoint.id) {
+                found = true;
+                break;
+            } else if (edge[0].id === endpoint.id && edge[1].id === point.id) {
+                found = true;
+                break;
             }
-            if (!found) {
-                edges.push([point, endpoint]);
-            }
+        }
+        if (!found) {
+            edges.push([point, endpoint]);
         }
     }
 }
 
-function updateRegions() {
-    addNeighbors();
-    updateEdges();
-    //TODO only update affected regions to save space and time.
-    for (const point of pointsOfInterest) {
-        findShortestSelfCycle(point);
-    }
+function updateRegions(point) {
+    addNeighbors(point);
+    updateEdges(point);
+    findShortestSelfCycle(point);
 }
 
 

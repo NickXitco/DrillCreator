@@ -9,7 +9,6 @@ function openNewItemDialog() {
     ipcRenderer.send('new:open');
 }
 
-
 let downX;
 let downY;
 
@@ -30,11 +29,16 @@ let poiIDCounter = 0;
 let edges = [];
 let regions = [];
 
+/*
+let keyframes = [];
+
+let key = {function: KeyframeFunctions.set_x, object: activeDrawing, value: 400, time: 0};
+key.function(key.value, key.object);
+*/
 
 let panZoomCanvas = svgPanZoom('#svgMain', {panEnabled: false, beforePan: panCheck, controlIconsEnabled: false, minZoom: 1, dblClickZoomEnabled: false, });
 panZoomCanvas.zoom(2);
 panZoomCanvas.center();
-
 
 /*WE WILL need to eventually distinguish primitives from objects, probably based on editing mode.*/
 
@@ -174,7 +178,6 @@ function selectMove(x, y) {
         *   pulled the primitive.
         * */
 
-
         let snappedXY = shiftSnap(selectedLine);
         if (snappedXY !== undefined) {
             if (snappedXY.endpoint === 1) {
@@ -259,8 +262,10 @@ function drawUp(x, y) {
     if (activeDrawing instanceof Curve) {
         activeDrawing.hideControlPoint();
     }
+
     activeDrawing.hideAnchors();
     activeDrawing = null;
+
     smallGrid.setAttribute('visibility', 'hidden');
 }
 
@@ -364,9 +369,6 @@ function pointSnap(line, anchor) {
 }
 
 
-
-//This region checking stuff kills the machine, need to rethink/simplify.
-
 function checkIntersections(primitive, newLine) {
     for (const other of primitives) {
         if (other !== primitive) {
@@ -394,9 +396,9 @@ function checkIntersections(primitive, newLine) {
 
         }
     }
+    //TODO this is SUPER wasteful. We only need to update regions if a point is made AND only need to update on that point.
     updateRegions();
 }
-
 
 function addPointOfInterest(x, y, prim) {
     for (const point of pointsOfInterest) {
@@ -453,11 +455,11 @@ function updateRegions() {
     for (const point of pointsOfInterest) {
         findShortestSelfCycle(point);
     }
-    console.log(regions);
 }
 
 
 function findShortestSelfCycle(source) {
+    //TODO I *think* we can drop a path if it becomes longer than any path currently from that node? but we'll have to check... this is weird.
     let paths = [];
     for (const neighbor of source.neighbors) {
         let path = getShortestPath(neighbor, source);

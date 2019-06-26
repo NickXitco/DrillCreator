@@ -370,35 +370,35 @@ function pointSnap(line, anchor) {
 
 
 function checkIntersections(primitive, newLine) {
+    let point = null;
     for (const other of primitives) {
         if (other !== primitive) {
             if (primitive.x === other.x && primitive.y === other.y) {
                 addPointOfInterest(primitive.x, primitive.y, primitive);
-                let point = addPointOfInterest(primitive.x, primitive.y, other);
-                updateRegions(point);
+                point = addPointOfInterest(primitive.x, primitive.y, other);
             }
 
             if (primitive.x === other.endpointX && primitive.y === other.endpointY) {
                 addPointOfInterest(primitive.x, primitive.y, primitive);
-                let point = addPointOfInterest(primitive.x, primitive.y, other);
-                updateRegions(point);
+                point = addPointOfInterest(primitive.x, primitive.y, other);
             }
 
             if (!newLine){
                 if (primitive.endpointX === other.x && primitive.endpointY === other.y) {
                     addPointOfInterest(primitive.endpointX, primitive.endpointY, primitive);
-                    let point = addPointOfInterest(primitive.endpointX, primitive.endpointY, other);
-                    updateRegions(point);
+                    point = addPointOfInterest(primitive.endpointX, primitive.endpointY, other);
                 }
 
                 if (primitive.endpointX === other.endpointX && primitive.endpointY === other.endpointY) {
                     addPointOfInterest(primitive.endpointX, primitive.endpointY, primitive);
-                    let point = addPointOfInterest(primitive.endpointX, primitive.endpointY, other);
-                    updateRegions(point);
+                    point = addPointOfInterest(primitive.endpointX, primitive.endpointY, other);
                 }
             }
 
         }
+    }
+    if (point !== null) {
+        updateRegions(point);
     }
 }
 
@@ -448,8 +448,6 @@ function updateEdges(point) {
 }
 
 function updateRegions(point) {
-    console.log(point);
-    console.log(pointsOfInterest);
     addNeighbors(point);
     for (const neighbor of point.neighbors) {
         addNeighbors(neighbor);
@@ -461,6 +459,7 @@ function updateRegions(point) {
 
 function findShortestSelfCycle(source) {
     //TODO I *think* we can drop a path if it becomes longer than any path currently from that node? but we'll have to check... this is weird.
+    //TODO However, this is probably *SUPER* unimportant. BFS isn't _that_ expensive.
     let paths = [];
     for (const neighbor of source.neighbors) {
         let path = getShortestPath(neighbor, source);
@@ -525,10 +524,12 @@ function getShortestPath(source, dest) {
     while (prev[crawl] !== null) {
         path.push(ids[crawl]);
         crawl = prev[crawl];
+        console.log(JSON.stringify(path));
     }
-
+    console.log(path);
+    if (path.length === 3) {
+    }
     path.push(source);
-
     return path;
 }
 
@@ -545,10 +546,11 @@ function newRegion(path) {
 }
 
 function sortPath(path) {
-    path = path.sort(function (a, b) {
+    let sorted_path = path.slice();
+    sorted_path.sort(function (a, b) {
         return a.id - b.id;
     });
-    return path;
+    return sorted_path;
 }
 
 

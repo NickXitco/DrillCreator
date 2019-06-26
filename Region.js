@@ -11,7 +11,6 @@ class Region extends Canvas_Primitive {
         this.idText.setAttribute('text-anchor', "middle");
         this.idText.setAttribute('style', "font: 10px sans-serif; fill: blue");
         this.idText.innerHTML = "A1b";
-
     }
 
     updateD() {
@@ -31,8 +30,6 @@ class Region extends Canvas_Primitive {
         this.svg.setAttribute('opacity', "0.25");
         this.g.appendChild(this.idText);
         this.updateCenter();
-        this.idText.setAttribute('x', this.idX);
-        this.idText.setAttribute('y', this.idY);
     }
 
     updateCenter() {
@@ -41,5 +38,7 @@ class Region extends Canvas_Primitive {
             polygon.push([node.x, node.y]);
         }
         [this.idX, this.idY] = Util.vizCenter([polygon]);
+        this.idText.setAttribute('x', this.idX);
+        this.idText.setAttribute('y', this.idY);
     }
 }

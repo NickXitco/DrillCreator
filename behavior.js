@@ -114,7 +114,6 @@ function selectPrimitive(e) {
             selectedLine.setActiveControlPoint();
         }
     }
-    console.log({x: selectedLine.centerX, y: selectedLine.centerY});
     updatePropertyFields(selectedLine);
 }
 
@@ -524,9 +523,7 @@ function getShortestPath(source, dest) {
     while (prev[crawl] !== null) {
         path.push(ids[crawl]);
         crawl = prev[crawl];
-        console.log(JSON.stringify(path));
     }
-    console.log(path);
     if (path.length === 3) {
     }
     path.push(source);

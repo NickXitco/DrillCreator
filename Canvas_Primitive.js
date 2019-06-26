@@ -28,14 +28,15 @@ class Canvas_Primitive {
     render() {
         this.svg.setAttribute('stroke', this.color);
         this.svg.setAttribute('fill', "none");
+        this.svg.setAttribute('stroke-linecap', "round");
         this.expandedSVG.setAttribute('stroke', "pink");
         this.expandedSVG.setAttribute('stroke-width', "20");
         this.expandedSVG.setAttribute('stroke-linecap', "round");
         this.expandedSVG.setAttribute('opacity', "0.1");
         this.expandedSVG.setAttribute('fill', "none");
         this.updateD();
-        this.g.appendChild(this.expandedSVG);
-        this.g.appendChild(this.svg);
+        this.g.insertBefore(this.expandedSVG, selectionDummy);
+        this.g.insertBefore(this.svg, drawingsDummy);
     };
 
     destroy() {

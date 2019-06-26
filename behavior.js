@@ -26,6 +26,10 @@ let gridMultiple = 1;
 let primitives = [];
 
 let pointsOfInterest = [];
+let poiIDCounter = 0;
+let edges = [];
+let regions = [];
+
 
 let panZoomCanvas = svgPanZoom('#svgMain', {panEnabled: false, beforePan: panCheck, controlIconsEnabled: false, minZoom: 1, dblClickZoomEnabled: false, });
 panZoomCanvas.zoom(2);
@@ -360,6 +364,9 @@ function pointSnap(line, anchor) {
 }
 
 
+
+//This region checking stuff kills the machine, need to rethink/simplify.
+
 function checkIntersections(primitive, newLine) {
     for (const other of primitives) {
         if (other !== primitive) {
@@ -398,14 +405,12 @@ function addPointOfInterest(x, y, prim) {
             return;
         }
     }
-
     let newPoi = new POI(x, y);
+    newPoi.id = poiIDCounter;
+    poiIDCounter += 1;
     newPoi.primitives.add(prim);
     pointsOfInterest.push(newPoi);
 }
-
-
-
 
 function addNeighbors() {
     for (const point of pointsOfInterest) {
@@ -421,10 +426,133 @@ function addNeighbors() {
     }
 }
 
+function updateEdges() {
+    for (const point of pointsOfInterest) {
+        for (const endpoint of point.neighbors) {
+            let found = false;
+            for (const edge of edges) {
+                if (edge[0].id === point.id && edge[1].id === endpoint.id) {
+                    found = true;
+                    break;
+                } else if (edge[0].id === endpoint.id && edge[1].id === point.id) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                edges.push([point, endpoint]);
+            }
+        }
+    }
+}
+
 function updateRegions() {
     addNeighbors();
-    //Search for cycles!
-    console.log(pointsOfInterest);
+    updateEdges();
+    //TODO only update affected regions to save space and time.
+    for (const point of pointsOfInterest) {
+        findShortestSelfCycle(point);
+    }
+    console.log(regions);
+}
+
+
+function findShortestSelfCycle(source) {
+    let paths = [];
+    for (const neighbor of source.neighbors) {
+        let path = getShortestPath(neighbor, source);
+        if (path != null) {
+            paths.push(path);
+        }
+    }
+
+    for (const path of paths) {
+        if (newRegion(path)) {
+            createNewRegion(path);
+        }
+    }
+}
+
+//Note, this algorithm will not find paths of length 1. It intentionally avoids paths that are 1 hop away from dest.
+function getShortestPath(source, dest) {
+    let Q = [];
+
+    let visited = [];
+    let dist = [];
+    let prev = [];
+    let ids = [];
+
+    for (const point of pointsOfInterest) {
+        visited[point.id] = false;
+        dist[point.id] = Infinity;
+        prev[point.id] = null;
+        ids[point.id] = point;
+    }
+
+    visited[source.id] = true;
+    dist[source.id] = 0;
+    Q.push(source);
+
+    let found = false;
+
+    while (Q.length !== 0 && !found) {
+        let u = Q.shift();
+        for (const neighbor of u.neighbors) {
+            if (!visited[neighbor.id]) {
+                if (!(neighbor === dest && u === source)) {
+                    visited[neighbor.id] = true;
+                    dist[neighbor.id] = dist[u.id] + 1;
+                    prev[neighbor.id] = u.id;
+                    Q.push(neighbor);
+                    if (neighbor === dest) {
+                        found = true;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    if (!found) {
+        return null;
+    }
+
+    let path = [];
+    let crawl = dest.id;
+    while (prev[crawl] !== null) {
+        path.push(ids[crawl]);
+        crawl = prev[crawl];
+    }
+
+    path.push(source);
+
+    return path;
+}
+
+function newRegion(path) {
+    let found = false;
+    for (const region of regions) {
+        if (region.length === path.length) {
+            if (JSON.stringify(sortPath(region)) === JSON.stringify(sortPath(path))) {
+                found = true;
+            }
+        }
+    }
+    return !found;
+}
+
+function sortPath(path) {
+    path = path.sort(function (a, b) {
+        return a.id - b.id;
+    });
+    return path;
+}
+
+
+function createNewRegion(region){
+    regions.push(region); //TODO Shouldn't we be pushing the region object? yes. but gimme a break for now.
+    let region_object = new Region(region);
+    region_object.render();
 }
 
 ipcRenderer.on('item:add', function(){

@@ -32,6 +32,8 @@
                         </pattern>
                     </defs>
                     <rect id="gridRect" width="200%" height="200%" fill="url(#grid)" visibility="hidden"></rect>
+                    <rect id="selectionDummy" visibility="hidden"></rect>
+                    <rect id="drawingsDummy" visibility="hidden"></rect>
                 </g>
             </svg>
         </div>
@@ -115,6 +117,8 @@
 
         const smallGrid = document.querySelector('#smallGrid');
         const gridRect = document.querySelector('#gridRect');
+        const selectionDummy = document.getElementById("selectionDummy");
+        const drawingsDummy = document.getElementById("drawingsDummy");
 
         const g = document.querySelector('#svgG');
 
@@ -197,6 +201,7 @@
 
     <script src="Canvas_Object.js"></script>
     <script src="Canvas_Primitive.js"></script>
+    <script src="Region.js"></script>
     <script src="Line.js"></script>
     <script src="Curve.js"></script>
     <script src="Person.js"></script>

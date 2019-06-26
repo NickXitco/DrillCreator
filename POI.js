@@ -1,4 +1,5 @@
 class POI {
+    id;
     x;
     y;
     primitives = new Set();

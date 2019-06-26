@@ -40,13 +40,14 @@
 
         <div id="properties" style="background: bisque; grid-area: 1 / 3 / 3 / 4">
             <ul style="list-style-type: none">
-                <li><label for="label">Label: </label>        <input type="text" onchange="updateClassProperties(selectedLine)" class="properties" id="label">          </li>
-                <li><label for="activeX1">X1: </label>        <input type="text" onchange="updateClassProperties(selectedLine)" class="properties" id="activeX1">       </li>
-                <li><label for="activeY1">Y1: </label>        <input type="text" onchange="updateClassProperties(selectedLine)" class="properties" id="activeY1">       </li>
-                <li><label for="activeX2">X2: </label>        <input type="text" onchange="updateClassProperties(selectedLine)" class="properties" id="activeX2">       </li>
-                <li><label for="activeY2">Y2: </label>        <input type="text" onchange="updateClassProperties(selectedLine)" class="properties" id="activeY2">       </li>
-                <li><label for="activeWidth">Width: </label>  <input type="text" onchange="updateClassProperties(selectedLine)" class="properties" id="activeWidth">    </li>
-                <li><label for="activeHeight">Height: </label><input type="text" onchange="updateClassProperties(selectedLine)" class="properties" id="activeHeight">   </li>
+                <li><label for="label">Label: </label>        <input type="text" onchange="updateClassProperties(selectedPrimitive)" class="properties" id="label">          </li>
+                <li><label for="activeX1">X1: </label>        <input type="text" onchange="updateClassProperties(selectedPrimitive)" class="properties" id="activeX1">       </li>
+                <li><label for="activeY1">Y1: </label>        <input type="text" onchange="updateClassProperties(selectedPrimitive)" class="properties" id="activeY1">       </li>
+                <li><label for="activeX2">X2: </label>        <input type="text" onchange="updateClassProperties(selectedPrimitive)" class="properties" id="activeX2">       </li>
+                <li><label for="activeY2">Y2: </label>        <input type="text" onchange="updateClassProperties(selectedPrimitive)" class="properties" id="activeY2">       </li>
+                <li><label for="activeWidth">Width: </label>  <input type="text" onchange="updateClassProperties(selectedPrimitive)" class="properties" id="activeWidth">    </li>
+                <li><label for="activeHeight">Height: </label><input type="text" onchange="updateClassProperties(selectedPrimitive)" class="properties" id="activeHeight">   </li>
+                <li><label for="activeColor">Color: </label> <input type="color" onchange="updateClassProperties(selectedPrimitive)" class="properties" id="activeColor">    </li>
             </ul>
         </div>
 
@@ -131,6 +132,7 @@
         const y2Field = document.getElementById("activeY2");
         //const widthField = document.getElementById("activeWidth");
         //const heightField = document.getElementById("activeHeight");
+        const colorField = document.getElementById("activeColor");
 
         let currentTool = null;
         function toolSelect(tool){
@@ -145,12 +147,14 @@
                 x2Field.value = renderable.endpointX;
                 y1Field.value = renderable.y;
                 y2Field.value = renderable.endpointY;
+                colorField.value = renderable.color;
             } else {
                 labelField.value = "";
                 x1Field.value = "";
                 x2Field.value = "";
                 y1Field.value = "";
                 y2Field.value = "";
+                colorField.value = "#000000";
             }
         }
 
@@ -167,15 +171,16 @@
                 renderable.endpointX = x2Field.value;
                 renderable.y = y1Field.value;
                 renderable.endpointY = y2Field.value;
+                renderable.setColor(colorField.value);
                 renderable.updateD();
             }
         }
 
         onkeydown = function (e) {
             //Check this on windows, we may want to also allow "delete" to work, or change it based on system.
-            if (selectedLine != null && e.key==="Backspace" && !propertiesFocus()) {
-                selectedLine.destroy();
-                selectedLine = null;
+            if (selectedPrimitive != null && e.key==="Backspace" && !propertiesFocus()) {
+                selectedPrimitive.destroy();
+                selectedPrimitive = null;
             }
         };
 

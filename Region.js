@@ -6,7 +6,7 @@ class Region extends Canvas_Primitive {
     idY;
 
     constructor(path) {
-        super(path[0].x, path[0].y, "gray");
+        super(path[0].x, path[0].y, "#cccccc");
         this.path = path;
         this.idText.setAttribute('text-anchor', "middle");
         this.idText.setAttribute('style', "font: 10px sans-serif; fill: blue");
@@ -40,5 +40,10 @@ class Region extends Canvas_Primitive {
         [this.idX, this.idY] = Util.vizCenter([polygon]);
         this.idText.setAttribute('x', this.idX);
         this.idText.setAttribute('y', this.idY);
+    }
+
+    setColor(color) {
+        super.setColor(color);
+        this.svg.setAttribute('fill', this.color);
     }
 }

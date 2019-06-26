@@ -54,4 +54,10 @@ class Canvas_Primitive {
     highlightOn() {};
 
     highlightOff() {};
+
+    selectShift() {};
+
+    setColor(color) {
+        this.color = color;
+    };
 }

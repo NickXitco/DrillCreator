@@ -59,7 +59,7 @@ class Line extends Canvas_Primitive {
     }
 
     setColor(color) {
-        this.color = color;
+        super.setColor(color);
         this.svg.setAttribute('stroke', color);
     }
 

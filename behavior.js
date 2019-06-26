@@ -13,7 +13,7 @@ let downX;
 let downY;
 
 let activeDrawing = null;
-let selectedLine = null;
+let selectedPrimitive = null;
 let movingControlPoint = false;
 let movingPrimitive = false;
 
@@ -44,7 +44,8 @@ panZoomCanvas.center();
 
 svgCanvas.onmousedown = function(e){
     let {x, y} = virtualRoundedXY(e);
-
+    x = parseInt(x);
+    y = parseInt(y);
     if (e.button === 0 && (currentTool === tools.LINE || currentTool === tools.CURVE)) {
         drawDown(x, y);
     } else if (e.button === 0 && (currentTool === tools.SELECT)) {
@@ -57,6 +58,8 @@ svgCanvas.onmousedown = function(e){
 
 svgCanvas.onmousemove = function(e) {
     let {x, y} = virtualRoundedXY(e);
+    x = parseInt(x);
+    y = parseInt(y);
     if (activeDrawing != null && e.button === 0 && (currentTool === tools.LINE || currentTool === tools.CURVE)) {
         drawMove(x, y);
     } else if (currentTool === tools.SELECT) {
@@ -67,6 +70,8 @@ svgCanvas.onmousemove = function(e) {
 
 svgCanvas.onmouseup = function(e) {
     let {x, y} = virtualRoundedXY(e);
+    x = parseInt(x);
+    y = parseInt(y);
     if (activeDrawing != null && e.button === 0 && (currentTool === tools.LINE || currentTool === tools.CURVE)) {
         drawUp(x, y);
     } else if (e.button === 0 && currentTool === tools.SELECT) {
@@ -103,30 +108,34 @@ function panCheck(oldPan, newPan) {
 }
 
 function selectPrimitive(e) {
-    if (selectedLine !== $(e.target).data().self) {
-        if (selectedLine != null) {
+    if (selectedPrimitive !== $(e.target).data().self) {
+        if (selectedPrimitive != null) {
             deselectPrimitive();
         }
-        selectedLine = $(e.target).data().self;
-        selectedLine.highlightOn();
-        selectedLine.showAnchors();
-        if (selectedLine instanceof Curve) {
-            selectedLine.setActiveControlPoint();
+        selectedPrimitive = $(e.target).data().self;
+        if (selectedPrimitive instanceof Line) {
+            selectedPrimitive.highlightOn();
+            selectedPrimitive.showAnchors();
+        }
+        if (selectedPrimitive instanceof Curve) {
+            selectedPrimitive.setActiveControlPoint();
         }
     }
-    updatePropertyFields(selectedLine);
+    updatePropertyFields(selectedPrimitive);
 }
 
 function deselectPrimitive() {
-    if (selectedLine != null) {
-        if (selectedLine instanceof Curve) {
-            selectedLine.hideControlPoint();
+    if (selectedPrimitive != null) {
+        if (selectedPrimitive instanceof Curve) {
+            selectedPrimitive.hideControlPoint();
         }
-        selectedLine.highlightOff();
-        selectedLine.hideAnchors();
-        selectedLine = null;
+        if (selectedPrimitive instanceof Line) {
+            selectedPrimitive.highlightOff();
+            selectedPrimitive.hideAnchors();
+        }
+        selectedPrimitive = null;
     }
-    updatePropertyFields(selectedLine);
+    updatePropertyFields(selectedPrimitive);
 }
 
 function selectDown(e, x, y) {
@@ -141,32 +150,32 @@ function selectDown(e, x, y) {
         downX = x;
         downY = y;
         movingPrimitive = true;
-    } else if (selectedLine != null) {
+    } else if (selectedPrimitive != null) {
         deselectPrimitive();
     }
 }
 
 function selectMove(x, y) {
     if (movingControlPoint) {
-        selectedLine.updateControlPoint(x, y);
+        selectedPrimitive.updateControlPoint(x, y);
     } else if (movingAnchor) {
-        selectedLine.updateAnchor(x, y);
+        selectedPrimitive.updateAnchor(x, y);
 
-        let snappedXY = pointSnap(selectedLine, true);
+        let snappedXY = pointSnap(selectedPrimitive, true);
         if (snappedXY !== undefined) {
-            selectedLine.updateAnchor(snappedXY.closestPoint.x, snappedXY.closestPoint.y);
+            selectedPrimitive.updateAnchor(snappedXY.closestPoint.x, snappedXY.closestPoint.y);
         }
 
     } else if (movingEndpointAnchor) {
-        selectedLine.updateEndpoint(x, y);
+        selectedPrimitive.updateEndpoint(x, y);
 
-        let snappedXY = pointSnap(selectedLine, false);
+        let snappedXY = pointSnap(selectedPrimitive, false);
         if (snappedXY !== undefined) {
-            selectedLine.updateEndpoint(snappedXY.closestPoint.x, snappedXY.closestPoint.y);
+            selectedPrimitive.updateEndpoint(snappedXY.closestPoint.x, snappedXY.closestPoint.y);
         }
 
     } else if (movingPrimitive) {
-        selectedLine.selectShift(x - downX, y - downY);
+        selectedPrimitive.selectShift(x - downX, y - downY);
         downX = x;
         downY = y;
 
@@ -177,28 +186,28 @@ function selectMove(x, y) {
         *   pulled the primitive.
         * */
 
-        let snappedXY = shiftSnap(selectedLine);
+        let snappedXY = shiftSnap(selectedPrimitive);
         if (snappedXY !== undefined) {
             if (snappedXY.endpoint === 1) {
                 //snap anchor
-                selectedLine.selectShift(snappedXY.closestPoint.x - selectedLine.x, snappedXY.closestPoint.y - selectedLine.y);
+                selectedPrimitive.selectShift(snappedXY.closestPoint.x - selectedPrimitive.x, snappedXY.closestPoint.y - selectedPrimitive.y);
             } else {
                 //snap endpoint
-                selectedLine.selectShift(snappedXY.closestPoint.x - selectedLine.endpointX, snappedXY.closestPoint.y - selectedLine.endpointY);
+                selectedPrimitive.selectShift(snappedXY.closestPoint.x - selectedPrimitive.endpointX, snappedXY.closestPoint.y - selectedPrimitive.endpointY);
             }
         }
     }
 
-    if (selectedLine === null) {
+    if (selectedPrimitive === null) {
         updateMouseFields(x, y);
     } else {
-        updatePropertyFields(selectedLine);
+        updatePropertyFields(selectedPrimitive);
     }
 }
 
 function selectUp(x, y) {
     if (movingControlPoint) {
-        selectedLine.updateControlPoint(x, y);
+        selectedPrimitive.updateControlPoint(x, y);
         movingControlPoint = false;
     } else if (movingAnchor) {
         movingAnchor = false;
@@ -206,17 +215,17 @@ function selectUp(x, y) {
         movingEndpointAnchor = false;
     }
 
-    if (selectedLine !==  null) {
-        checkIntersections(selectedLine, false);
+    if (selectedPrimitive !==  null) {
+        checkIntersections(selectedPrimitive, false);
     }
     movingPrimitive = false;
 }
 
 function drawDown(x, y) {
     if (currentTool === tools.LINE) {
-        activeDrawing = new Line(x, y, x, y, "red");
+        activeDrawing = new Line(x, y, x, y, "#ff0000");
     } else if (currentTool === tools.CURVE) {
-        activeDrawing = new Curve(x, y, x, y, "blue");
+        activeDrawing = new Curve(x, y, x, y, "#0000ff");
     }
 
     let snappedXY = pointSnap(activeDrawing, true);

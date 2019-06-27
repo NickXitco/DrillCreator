@@ -24,12 +24,13 @@ class Region extends Canvas_Primitive {
     }
 
     render() {
-        super.render();
+        this.updateD();
         this.svg.setAttribute('stroke', "none");
         this.svg.setAttribute('fill', this.color);
         this.svg.setAttribute('opacity', "0.25");
+        this.g.insertBefore(this.svg, selectionDummy);
+        this.g.appendChild(this.expandedSVG);
         this.g.appendChild(this.idText);
-        this.updateCenter();
     }
 
     updateCenter() {
@@ -45,5 +46,10 @@ class Region extends Canvas_Primitive {
     setColor(color) {
         super.setColor(color);
         this.svg.setAttribute('fill', this.color);
+    }
+
+    destroy() {
+        this.g.removeChild(this.idText);
+        super.destroy();
     }
 }

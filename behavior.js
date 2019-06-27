@@ -378,28 +378,32 @@ function pointSnap(line, anchor) {
 
 
 function checkIntersections(primitive, newLine) {
+    if (primitive instanceof Region) {
+        return;
+    }
+
     let point = null;
-    for (const other of primitives) {
-        if (other !== primitive) {
-            if (primitive.x === other.x && primitive.y === other.y) {
+    for (const neighboring_prim of primitives) {
+        if (neighboring_prim !== primitive) {
+            if (primitive.x === neighboring_prim.x && primitive.y === neighboring_prim.y) {
                 addPointOfInterest(primitive.x, primitive.y, primitive);
-                point = addPointOfInterest(primitive.x, primitive.y, other);
+                point = addPointOfInterest(primitive.x, primitive.y, neighboring_prim);
             }
 
-            if (primitive.x === other.endpointX && primitive.y === other.endpointY) {
+            if (primitive.x === neighboring_prim.endpointX && primitive.y === neighboring_prim.endpointY) {
                 addPointOfInterest(primitive.x, primitive.y, primitive);
-                point = addPointOfInterest(primitive.x, primitive.y, other);
+                point = addPointOfInterest(primitive.x, primitive.y, neighboring_prim);
             }
 
             if (!newLine){
-                if (primitive.endpointX === other.x && primitive.endpointY === other.y) {
+                if (primitive.endpointX === neighboring_prim.x && primitive.endpointY === neighboring_prim.y) {
                     addPointOfInterest(primitive.endpointX, primitive.endpointY, primitive);
-                    point = addPointOfInterest(primitive.endpointX, primitive.endpointY, other);
+                    point = addPointOfInterest(primitive.endpointX, primitive.endpointY, neighboring_prim);
                 }
 
-                if (primitive.endpointX === other.endpointX && primitive.endpointY === other.endpointY) {
+                if (primitive.endpointX === neighboring_prim.endpointX && primitive.endpointY === neighboring_prim.endpointY) {
                     addPointOfInterest(primitive.endpointX, primitive.endpointY, primitive);
-                    point = addPointOfInterest(primitive.endpointX, primitive.endpointY, other);
+                    point = addPointOfInterest(primitive.endpointX, primitive.endpointY, neighboring_prim);
                 }
             }
 
@@ -483,7 +487,7 @@ function findShortestSelfCycle(source) {
     }
 }
 
-//Note, this algorithm will not find paths of length 1. It intentionally avoids paths that are 1 hop away from dest.
+//Note, this algorithm will not actually find the shortest path. It intentionally avoids paths that are 1 hop away from dest.
 function getShortestPath(source, dest) {
     let Q = [];
 
@@ -542,8 +546,8 @@ function getShortestPath(source, dest) {
 function newRegion(path) {
     let found = false;
     for (const region of regions) {
-        if (region.length === path.length) {
-            if (JSON.stringify(sortPath(region)) === JSON.stringify(sortPath(path))) {
+        if (region.path.length === path.length) {
+            if (JSON.stringify(sortPath(region.path)) === JSON.stringify(sortPath(path))) {
                 found = true;
             }
         }
@@ -559,11 +563,74 @@ function sortPath(path) {
     return sorted_path;
 }
 
-
 function createNewRegion(region){
-    regions.push(region); //TODO Shouldn't we be pushing the region object? yes. but gimme a break for now.
     let region_object = new Region(region);
+    regions.push(region_object);
+    console.log(region_object);
     region_object.render();
+}
+
+function deletePrimitive(primitive) {
+    let pointsToDelete = new Set();
+    let regionsToDelete = new Set();
+    let includedPoints = new Set();
+    let poisToUpdate = new Set();
+    let edgesToDelete = new Set();
+
+    for (const point of pointsOfInterest) {
+        if (point.primitives.has(primitive) && point.primitives.size <= 2) {
+            includedPoints.add(point);
+            pointsToDelete.add(point);
+        } else if (point.primitives.has(primitive)) {
+            includedPoints.add(point);
+            point.primitives.delete(primitive);
+        }
+    }
+
+    for (const region of regions) {
+        for (const point of includedPoints) {
+            if (region.path.includes(point)) {
+                for (const affectedPoint of region.path) {
+                    if (!pointsToDelete.has(affectedPoint)) {
+                        poisToUpdate.add(affectedPoint);
+                    }
+                }
+                regionsToDelete.add(region);
+            }
+        }
+    }
+
+    for (const edge of edges) {
+        for (const point in includedPoints) {
+            if (edge[0] === point || edge[1] === point) {
+                edgesToDelete.add(edge);
+            }
+        }
+    }
+
+    for (const edge of edgesToDelete) {
+        edges = edges.filter(item => item !== edge);
+    }
+
+    for (const point of pointsToDelete) {
+        pointsOfInterest = pointsOfInterest.filter(item => item !== point);
+    }
+
+    for (const region of regionsToDelete) {
+        regions = regions.filter(item => item !== region);
+        region.destroy();
+    }
+
+    primitive.destroy();
+    primitives = primitives.filter(item => item !== primitive);
+
+    for (const point of poisToUpdate) {
+        point.neighbors.clear();
+    }
+
+    for (const point of poisToUpdate) {
+        updateRegions(point);
+    }
 }
 
 ipcRenderer.on('item:add', function(){

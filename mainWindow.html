@@ -179,7 +179,7 @@
         onkeydown = function (e) {
             //Check this on windows, we may want to also allow "delete" to work, or change it based on system.
             if (selectedPrimitive != null && e.key==="Backspace" && !propertiesFocus()) {
-                selectedPrimitive.destroy();
+                deletePrimitive(selectedPrimitive);
                 selectedPrimitive = null;
             }
         };

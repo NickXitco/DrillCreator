@@ -9,4 +9,9 @@ class POI {
         this.x = x;
         this.y = y;
     }
+
+    destroy() {
+        delete this.primitives;
+        delete this.neighbors;
+    }
 }

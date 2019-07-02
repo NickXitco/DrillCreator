@@ -3,6 +3,7 @@ class Canvas_Primitive {
     x;
     y;
     d = "";
+
     self = this;
 
     color;
@@ -17,8 +18,8 @@ class Canvas_Primitive {
         this.y = y;
         this.color = color;
         this.svg.addEventListener("click", this.click);
-        $(this.svg).data(this);
-        $(this.expandedSVG).data(this);
+        $(this.svg).data(this.self);
+        $(this.expandedSVG).data(this.self);
     }
 
     click(){};
@@ -43,7 +44,6 @@ class Canvas_Primitive {
         this.g.removeChild(this.svg);
         this.g.removeChild(this.expandedSVG);
         delete this.svg;
-        delete this;
     }
 
     setID(id) {
@@ -55,7 +55,7 @@ class Canvas_Primitive {
 
     highlightOff() {};
 
-    selectShift() {};
+    shift() {};
 
     setColor(color) {
         this.color = color;

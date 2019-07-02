@@ -5,56 +5,23 @@ class Line extends Canvas_Primitive {
     centerX;
     centerY;
 
-    anchorSVG = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    endpointSVG = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-
+    anchor;
+    endpoint;
 
     constructor (x, y, endpointX, endpointY, color) {
         super(x, y, color);
         this.endpointX = endpointX;
         this.endpointY = endpointY;
         this.svg.setAttribute('stroke-width', "2");
-        Line.createAnchorPoint(this.anchorSVG, x, y);
-        Line.createAnchorPoint(this.endpointSVG, x, y);
-    }
 
-    renderAnchors() {
-        this.g.appendChild(this.anchorSVG);
-        this.g.appendChild(this.endpointSVG);
-    }
-
-    showAnchors(){
-        this.anchorSVG.setAttribute('visibility', "visible");
-        this.anchorSVG.setAttribute('id', "activeAnchor");
-        this.endpointSVG.setAttribute('visibility', "visible");
-        this.endpointSVG.setAttribute('id', "activeEndpointAnchor");
-    }
-
-    hideAnchors(){
-        this.anchorSVG.setAttribute('visibility', "hidden");
-        this.anchorSVG.removeAttribute('id');
-        this.endpointSVG.setAttribute('visibility', "hidden");
-        this.endpointSVG.removeAttribute('id');
-    }
-
-    static createAnchorPoint(svg, x, y) {
-        svg.setAttribute('width', "5");
-        svg.setAttribute('height', "5");
-        svg.setAttribute('style', "fill:white;stroke:blue;stroke-width:1");
-        Line.moveAnchorPoint(svg, x, y);
-    }
-
-    static moveAnchorPoint(svg, x, y) {
-        svg.setAttribute('x', (x - 2.5).toString());
-        svg.setAttribute('y', (y - 2.5).toString());
+        this.anchor = new Endpoint(x, y, this, 'anchor');
+        this.endpoint = new Endpoint(endpointX, endpointY, this, 'endpoint');
     }
 
     updateD() {
         this.d = "M" + this.x + " " + this.y + " L" + this.endpointX + " " + this.endpointY;
         this.svg.setAttribute('d', this.d);
         this.expandedSVG.setAttribute('d', this.d);
-        Line.createAnchorPoint(this.anchorSVG, this.x, this.y);
-        Line.createAnchorPoint(this.endpointSVG, this.endpointX, this.endpointY);
         this.updateCenter();
     }
 
@@ -81,26 +48,26 @@ class Line extends Canvas_Primitive {
 
     highlightOn() {
         this.svg.setAttribute('stroke', "green");
+        this.anchor.show();
+        this.endpoint.show();
     }
 
     highlightOff() {
         this.svg.setAttribute('stroke', this.color);
+        this.anchor.hide();
+        this.endpoint.hide();
     }
 
-    selectShift(x, y) {
-        this.x += x;
-        this.y += y;
-        this.endpointX += x;
-        this.endpointY += y;
-        this.updateD();
+    shift(dx, dy) {
+        this.anchor.shift(dx, dy);
+        this.endpoint.shift(dx, dy);
     }
 
     destroy() {
-        this.g.removeChild(this.anchorSVG);
-        this.g.removeChild(this.endpointSVG);
+        this.endpoint.destroy();
+        this.anchor.destroy();
         super.destroy();
     }
-
 
     updateCenter() {
         this.centerX = (this.x + this.endpointX) / 2;

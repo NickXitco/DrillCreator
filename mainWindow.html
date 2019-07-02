@@ -134,6 +134,9 @@
         //const heightField = document.getElementById("activeHeight");
         const colorField = document.getElementById("activeColor");
 
+        let history = [];
+        let redo = [];
+
         let currentTool = null;
         function toolSelect(tool){
             currentTool = tool;
@@ -202,11 +205,17 @@
     <script src="node_modules/svg-pan-zoom/dist/svg-pan-zoom.js"></script>
     <script src="node_modules/polylabel/index.js"></script>
     <script src="helper.js"></script>
+
     <script src="KeyframeFunctions.js"></script>
+    <script src="Action.js"></script>
+
     <script src="POI.js"></script>
 
     <script src="Canvas_Object.js"></script>
     <script src="Canvas_Primitive.js"></script>
+    <script src="Point.js"></script>
+    <script src="ControlPoint.js"></script>
+    <script src="Endpoint.js"></script>
     <script src="Region.js"></script>
     <script src="Line.js"></script>
     <script src="Curve.js"></script>

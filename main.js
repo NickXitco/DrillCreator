@@ -120,6 +120,25 @@ const mainMenuTemplate = [
                 }
             }
         ]
+    },
+    {
+        label: 'Edit',
+        submenu: [
+            {
+                label: 'Undo',
+                accelerator: process.platform === 'darwin' ? 'Command+Z' : 'Ctrl+Z',
+                click(){
+                    mainWindow.webContents.send('undo');
+                }
+            },
+            {
+                label: 'Redo',
+                accelerator: process.platform === 'darwin' ? 'Command+Shift+Z' : 'Ctrl+Shift+Z',
+                click(){
+                    mainWindow.webContents.send('redo');
+                }
+            }
+        ]
     }
 ];
 

@@ -15,10 +15,19 @@ class Region extends Canvas_Primitive {
 
     updateD() {
         this.d = "M" + this.x + " " + this.y;
+        console.log(this.path);
         for (let i = 1; i < this.path.length; i++) {
-            this.d += " L" + this.path[i].x + " " + this.path[i].y;
+            if (this.path[i].primitives[0] instanceof Curve) {
+                this.d += " Q" + this.path[i].primitives[0].controlPoint.x + " " + this.path[i].primitives[0].controlPoint.y + " " + this.path[i].x + " " + this.path[i].y;
+            } else {
+                this.d += " L" + this.path[i].x + " " + this.path[i].y;
+            }
         }
-        this.d += " L" + this.x + " " + this.y;
+        if (this.path[0].primitives[0] instanceof Curve) {
+            this.d += " Q" + this.path[0].primitives[0].controlPoint.x + " " + this.path[0].primitives[0].controlPoint.y + " " + this.x + " " + this.y;
+        } else {
+            this.d += " L" + this.x + " " + this.y;
+        }
         this.svg.setAttribute('d', this.d);
         this.updateCenter();
     }

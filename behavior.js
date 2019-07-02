@@ -27,13 +27,7 @@ multiSelectRect.setAttribute('stroke-dasharray', '3');
 
 let gridMultiple = 1;
 
-let poiDeleteLock = false;
-
-let pointsOfInterest = new Set();
-let regions = new Set();
-let edges = new Set();
 let lines = [];
-let poiIDCounter = 0;
 
 
 /*
@@ -154,7 +148,6 @@ function selectDown(e, x, y) {
         } else {
             selectPrimitive(e);
             movingPrimitive = true;
-            poiDeleteLock = true;
         }
     } else if (selectedPrimitive != null) {
         deselectPrimitive();
@@ -182,14 +175,6 @@ function selectDown(e, x, y) {
 
 function selectMove(x, y) {
     if (movingPrimitive) {
-        if (poiDeleteLock) {
-            if (selectedPrimitive instanceof Line) {
-                moveLine(selectedPrimitive);
-            } else {
-                moveLine(selectedPrimitive.parentLine);
-            }
-            poiDeleteLock = false;
-        }
 
         selectedPrimitive.shift(x - downX, y - downY);
         downX = x;
@@ -279,14 +264,6 @@ function selectUp(x, y) {
     } else if (movingPrimitive) {
         movingPrimitive = false;
     }
-
-    if (selectedPrimitive !==  null) {
-        if (selectedPrimitive instanceof Line) {
-            checkIntersections(selectedPrimitive, false);
-        } else {
-            checkIntersections(selectedPrimitive.parentLine, false);
-        }
-    }
 }
 
 function drawDown(x, y) {
@@ -300,8 +277,6 @@ function drawDown(x, y) {
     if (snappedXY !== undefined) {
         activeDrawing.anchor.setLocation(snappedXY.x, snappedXY.y);
     }
-
-    checkIntersections(activeDrawing, true);
     activeDrawing.render();
     smallGrid.setAttribute('visibility', 'visible');
 }
@@ -332,7 +307,6 @@ function drawUp(x, y) {
         let id = Util.emptySlot(lines);
         activeDrawing.setID(id);
         lines[id] = activeDrawing;
-        checkIntersections(activeDrawing, false);
     }
     if (activeDrawing instanceof Curve) {
         activeDrawing.controlPoint.hide();
@@ -434,202 +408,8 @@ function pointSnap(endpoint) {
     }
 }
 
-function checkIntersections(primitive, newLine) {
-    if (primitive instanceof Region) {
-        return;
-    }
-
-    let point = null;
-    for (const neighboring_prim of lines) {
-        if (neighboring_prim !== primitive) {
-            if (primitive.x === neighboring_prim.x && primitive.y === neighboring_prim.y) {
-                addPointOfInterest(primitive.x, primitive.y, primitive);
-                point = addPointOfInterest(primitive.x, primitive.y, neighboring_prim);
-            }
-
-            if (primitive.x === neighboring_prim.endpointX && primitive.y === neighboring_prim.endpointY) {
-                addPointOfInterest(primitive.x, primitive.y, primitive);
-                point = addPointOfInterest(primitive.x, primitive.y, neighboring_prim);
-            }
-
-            if (!newLine){
-                if (primitive.endpointX === neighboring_prim.x && primitive.endpointY === neighboring_prim.y) {
-                    addPointOfInterest(primitive.endpointX, primitive.endpointY, primitive);
-                    point = addPointOfInterest(primitive.endpointX, primitive.endpointY, neighboring_prim);
-                }
-
-                if (primitive.endpointX === neighboring_prim.endpointX && primitive.endpointY === neighboring_prim.endpointY) {
-                    addPointOfInterest(primitive.endpointX, primitive.endpointY, primitive);
-                    point = addPointOfInterest(primitive.endpointX, primitive.endpointY, neighboring_prim);
-                }
-            }
-        }
-    }
-
-    if (point !== null) {
-        updateRegions(point);
-    }
-}
-
-function addPointOfInterest(x, y, prim) {
-    for (const point of pointsOfInterest) {
-        if (point.x === x && point.y === y) {
-            point.primitives.add(prim);
-            return point;
-        }
-    }
-    let newPoi = new POI(x, y);
-    newPoi.id = poiIDCounter;
-    poiIDCounter += 1;
-    newPoi.primitives.add(prim);
-    pointsOfInterest.add(newPoi);
-
-
-    //TODO delete debug info
-    let newPoiSVG = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-    let newPoiID = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    newPoiID.innerHTML = newPoi.id;
-    newPoiID.setAttribute('x', x);
-    newPoiID.setAttribute('y', y);
-    newPoiID.setAttribute('style', "font: 7px sans-serif; fill: white");
-    newPoiID.setAttribute('text-anchor', "middle");
-    newPoiID.setAttribute('alignment-baseline', "middle");
-    newPoiSVG.setAttribute('r', "5");
-    newPoiSVG.setAttribute('cx', x);
-    newPoiSVG.setAttribute('cy', y);
-    g.appendChild(newPoiSVG);
-    g.appendChild(newPoiID);
-
-    return newPoi;
-}
-
-function addNeighbors(point) {
-    for (const other_point of pointsOfInterest) {
-        if (other_point !== point) {
-            for (const prim of point.primitives) {
-                if (other_point.primitives.has(prim)) {
-                    point.neighbors.add(other_point);
-                }
-            }
-        }
-    }
-}
-
-function updateEdges(point) {
-    for (const endpoint of point.neighbors) {
-        let found = false;
-        for (const edge of edges) {
-            if (edge[0].id === point.id && edge[1].id === endpoint.id) {
-                found = true;
-                break;
-            } else if (edge[0].id === endpoint.id && edge[1].id === point.id) {
-                found = true;
-                break;
-            }
-        }
-        if (!found) {
-            edges.add([point, endpoint]);
-        }
-    }
-}
-
-function updateRegions(point) {
-    addNeighbors(point);
-    for (const neighbor of point.neighbors) {
-        addNeighbors(neighbor);
-    }
-    updateEdges(point);
-    findShortestSelfCycle(point);
-}
-
-function findShortestSelfCycle(source) {
-    //TODO I *think* we can drop a path if it becomes longer than any path currently from that node? but we'll have to check... this is weird.
-    //TODO However, this is probably *SUPER* unimportant. BFS isn't _that_ expensive.
-
-    let paths = [];
-    for (const neighbor of source.neighbors) {
-
-        let path = Util.getShortestCycle(neighbor, source, pointsOfInterest, []);
-        if (path != null) {
-            paths.push(path);
-        }
-    }
-
-    for (const path of paths) {
-        if (Util.newRegion(path, regions)) {
-            createNewRegion(path);
-        }
-    }
-}
-
-function createNewRegion(region){
-    let region_object = new Region(region);
-    regions.add(region_object);
-    region_object.render();
-}
-
-function deletePOI(poi) {
-    pointsOfInterest.delete(poi);
-
-    for (const region of regions) {
-        if (region.path.includes(poi)) {
-            regions.delete(region);
-            region.destroy();
-        }
-    }
-}
-
-function moveLine(line) {
-    let includedPoints = new Set();
-    let pointsToUpdate = new Set();
-    for (const point of pointsOfInterest) {
-        if (point.removeLine(line)) {
-            includedPoints.add(point);
-        }
-        if (point.deleteFlag) {
-            includedPoints.delete(point);
-            deletePOI(point);
-        }
-    }
-
-    for (const region of regions) {
-        for (const point of region.path) {
-            if (includedPoints.has(point)) {
-                for (const importantPoint of region.path) {
-                    pointsToUpdate.add(importantPoint);
-                }
-                regions.delete(region);
-                region.destroy();
-                break;
-            }
-        }
-    }
-
-    for (const edge of edges) {
-        if (!pointsOfInterest.has(edge[0]) || !pointsOfInterest.has(edge[1])) {
-            edges.delete(edge);
-        }
-        for (const point of includedPoints) {
-            if (edge[0] === point || edge[1] === point) {
-                edges.delete(edge);
-            }
-        }
-    }
-
-    for (const p1 of includedPoints) {
-        for (const p2 of includedPoints) {
-            p1.neighbors.delete(p2);
-        }
-    }
-
-    for (const p of pointsOfInterest) {
-        updateRegions(p);
-    }
-}
-
 
 function deletePrimitive(primitive) {
-    moveLine(primitive);
     primitive.destroy();
     lines = lines.filter(item => item !== primitive);
 }

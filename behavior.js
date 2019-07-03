@@ -9,25 +9,19 @@ function openNewItemDialog() {
     ipcRenderer.send('new:open');
 }
 
-let downX;
-let downY;
+let down = {x: null, y: null};
 
-let activeDrawing = null;
-let selectedPrimitive = null;
-let movingPrimitive = false;
-
-let movingMultiSelect = false;
-let multiSelecting = false;
-let selected = [];
-let multiSelectRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-multiSelectRect.setAttribute('stroke', 'gray');
-multiSelectRect.setAttribute('fill', 'none');
-multiSelectRect.setAttribute('stroke-dasharray', '3');
-
+let activeDrawing = {drawing: null, type: null};
+let bools = {movingSelection: false, multiSelecting: false};
+let multiSelectRect = createMultiSelectRect();
+let selection = {rect: multiSelectRect, primitives: []};
 
 let gridMultiple = 1;
 
 let lines = [];
+let pointsOfInterest = new Set();
+let poiIDCounter = 0;
+let edges = new Set();
 
 
 /*
@@ -64,9 +58,9 @@ svgCanvas.onmousedown = function(e){
     x = parseInt(x);
     y = parseInt(y);
     if (e.button === 0 && (currentTool === tools.LINE || currentTool === tools.CURVE)) {
-        drawDown(x, y);
+        drawDown(x, y, activeDrawing, lines);
     } else if (e.button === 0 && (currentTool === tools.SELECT)) {
-        selectDown(e, x, y);
+        selectDown(e, x, y, down, bools, selection);
     } else if (e.button === 1) {
         //middle click
         panZoomCanvas.enablePan();
@@ -77,342 +71,39 @@ svgCanvas.onmousemove = function(e) {
     let {x, y} = Util.virtualRoundedXY(e, svgCanvas, g, gridMultiple);
     x = parseInt(x);
     y = parseInt(y);
-    if (activeDrawing != null && e.button === 0 && (currentTool === tools.LINE || currentTool === tools.CURVE)) {
-        drawMove(x, y);
+    if (activeDrawing.drawing != null && e.button === 0 && (currentTool === tools.LINE || currentTool === tools.CURVE)) {
+        drawMove(x, y, activeDrawing, lines);
     } else if (currentTool === tools.SELECT) {
-        selectMove(x, y);
+        if (selection.primitives.length === 0 && bools.multiSelecting) {
+            moveMultiSelectRect(x, y, down, selection);
+        } else if (bools.movingSelection){
+            selectMove(x, y, down, selection, lines);
+        } else {
+            updateMouseFields(x, y);
+        }
     }
-
 };
 
 svgCanvas.onmouseup = function(e) {
     let {x, y} = Util.virtualRoundedXY(e, svgCanvas, g, gridMultiple);
     x = parseInt(x);
     y = parseInt(y);
-    if (activeDrawing != null && e.button === 0 && (currentTool === tools.LINE || currentTool === tools.CURVE)) {
-        drawUp(x, y);
+    if (activeDrawing.drawing != null && e.button === 0 && (currentTool === tools.LINE || currentTool === tools.CURVE)) {
+        drawUp(x, y, activeDrawing, lines);
+        let anchorPOI = createNewPOI(activeDrawing.drawing.anchor);
+        let endpointPOI = createNewPOI(activeDrawing.drawing.endpoint);
+        createNewEdge(anchorPOI, endpointPOI, activeDrawing.drawing);
+        activeDrawing.drawing = null;
+        activeDrawing.type = null;
     } else if (e.button === 0 && currentTool === tools.SELECT) {
-        selectUp(x, y);
+        selectUp(bools, selection, lines);
+        resolvePOIs(selection);
     } else if (e.button === 1) {
         panZoomCanvas.disablePan();
     }
+    console.log(pointsOfInterest);
+    console.log(edges);
 };
-
-function selectPrimitive(e) {
-    if (selectedPrimitive !== $(e.target).data().self) {
-        if (selectedPrimitive != null) {
-            deselectPrimitive();
-        }
-        selectedPrimitive = $(e.target).data().self;
-        if (selectedPrimitive instanceof Line) {
-            selectedPrimitive.highlightOn();
-        }
-        if (selectedPrimitive instanceof Curve) {
-            selectedPrimitive.controlPoint.show();
-        }
-        if (selectedPrimitive instanceof Point) {
-            selectedPrimitive.show();
-            selectedPrimitive.parentLine.highlightOn();
-        }
-        if (selectedPrimitive instanceof Region) {
-            selectedPrimitive = null;
-            movingPrimitive = false;
-        }
-    }
-    updatePropertyFields(selectedPrimitive);
-}
-
-function deselectPrimitive() {
-    if (selectedPrimitive != null) {
-        if (selectedPrimitive instanceof Curve) {
-            selectedPrimitive.controlPoint.hide();
-        }
-        if (selectedPrimitive instanceof Line) {
-            selectedPrimitive.highlightOff();
-        }
-        if (selectedPrimitive instanceof Point) {
-            selectedPrimitive.hide();
-            selectedPrimitive.parentLine.highlightOff();
-        }
-        selectedPrimitive = null;
-    }
-    updatePropertyFields(selectedPrimitive);
-}
-
-function selectDown(e, x, y) {
-    downX = x;
-    downY = y;
-    if (e.target.id !== "gridRect" && e.target.id !== "svgMain") {
-        if (selected.length !== 0) { //TODO refine this condition
-            movingMultiSelect = true;
-        } else {
-            selectPrimitive(e);
-            movingPrimitive = true;
-        }
-    } else if (selectedPrimitive != null) {
-        deselectPrimitive();
-        multiSelecting = true;
-        multiSelectRect.setAttribute('x', x);
-        multiSelectRect.setAttribute('y', y);
-        g.appendChild(multiSelectRect);
-    } else {
-        for (const selection of selected) {
-            if (selection instanceof Line) {
-                selection.highlightOff();
-            } else {
-                selection.hide();
-            }
-        }
-        selected = [];
-        multiSelecting = true;
-        multiSelectRect.setAttribute('x', x);
-        multiSelectRect.setAttribute('y', y);
-        g.appendChild(multiSelectRect);
-    }
-}
-
-
-
-function selectMove(x, y) {
-    if (movingPrimitive) {
-
-        selectedPrimitive.shift(x - downX, y - downY);
-        downX = x;
-        downY = y;
-        /* TODO there's a sour problem with the shifting one here. Basically when things get snapped, they get "glued"
-        *   that is to say that in order to break the snap, you need to yank it out of the snap zone "fast" enough,
-        *   as opposed to "far" enough. You have to move the mouse more than 7 units in a single frame in order
-        *   for the glue to break, or else it will continue shifting back into place, regardless of how far you've
-        *   pulled the primitive.
-        * */
-
-        if (selectedPrimitive instanceof Line) {
-            let snappedXY = shiftSnap(selectedPrimitive);
-            if (snappedXY !== undefined) {
-                if (snappedXY.endpoint === 1) {
-                    //snap anchor
-                    selectedPrimitive.shift(snappedXY.closestPoint.x - selectedPrimitive.x, snappedXY.closestPoint.y - selectedPrimitive.y);
-                } else {
-                    //snap endpoint
-                    selectedPrimitive.shift(snappedXY.closestPoint.x - selectedPrimitive.endpointX, snappedXY.closestPoint.y - selectedPrimitive.endpointY);
-                }
-            }
-        } else {
-            let snappedXY = pointSnap(selectedPrimitive);
-            if (snappedXY !== undefined) {
-                selectedPrimitive.setLocation(snappedXY.x, snappedXY.y);
-            }
-        }
-
-    } else if (multiSelecting) {
-        if ((x - downX) >= 0) {
-            multiSelectRect.setAttribute('width', (x - downX).toString());
-        } else {
-            multiSelectRect.setAttribute('x', (x).toString());
-            multiSelectRect.setAttribute('width', (downX - x).toString());
-        }
-
-        if ((y - downY) >= 0) {
-            multiSelectRect.setAttribute('height', (y - downY).toString());
-        } else {
-            multiSelectRect.setAttribute('y', (y).toString());
-            multiSelectRect.setAttribute('height', (downY - y).toString());
-        }
-    } else if (movingMultiSelect) {
-        for (const selection of selected) {
-            selection.shift(x - downX, y - downY);
-        }
-        downX = x;
-        downY = y;
-    }
-
-    if (selectedPrimitive === null) {
-        updateMouseFields(x, y);
-    } else {
-        updatePropertyFields(selectedPrimitive);
-    }
-}
-
-function selectUp(x, y) {
-    if (multiSelecting) {
-        const xMin = parseInt(multiSelectRect.getAttribute('x'));
-        const xMax = parseInt(multiSelectRect.getAttribute('width')) + xMin;
-        const yMin = parseInt(multiSelectRect.getAttribute('y'));
-        const yMax = parseInt(multiSelectRect.getAttribute('height')) + yMin;
-
-        for (const prim of lines) {
-            if (prim instanceof Line) {
-                if (prim.x >= xMin && prim.x <= xMax && prim.endpointX >= xMin && prim.endpointX <= xMax && prim.y >= yMin && prim.y <= yMax && prim.endpointY >= yMin && prim.endpointY <= yMax) {
-                    selected.push(prim);
-                    prim.highlightOn();
-                } else if (prim.x >= xMin && prim.x <= xMax && prim.y >= yMin && prim.y <= yMax) {
-                    selected.push(prim.anchor);
-                    prim.anchor.show();
-                } else if (prim.endpointX >= xMin && prim.endpointX <= xMax && prim.endpointY >= yMin && prim.endpointY <= yMax) {
-                    selected.push(prim.endpoint);
-                    prim.endpoint.show();
-                }
-            }
-        }
-
-        multiSelecting = false;
-        multiSelectRect.setAttribute('width', "0");
-        multiSelectRect.setAttribute('height', "0");
-        g.removeChild(multiSelectRect);
-    } else if (movingMultiSelect) {
-        movingMultiSelect = false;
-    } else if (movingPrimitive) {
-        movingPrimitive = false;
-    }
-}
-
-function drawDown(x, y) {
-    if (currentTool === tools.LINE) {
-        activeDrawing = new Line(x, y, x, y, "#ff0000");
-    } else if (currentTool === tools.CURVE) {
-        activeDrawing = new Curve(x, y, x, y, "#0000ff");
-    }
-
-    let snappedXY = pointSnap(activeDrawing.endpoint);
-    if (snappedXY !== undefined) {
-        activeDrawing.anchor.setLocation(snappedXY.x, snappedXY.y);
-    }
-    activeDrawing.render();
-    smallGrid.setAttribute('visibility', 'visible');
-}
-
-function drawMove(x, y) {
-    activeDrawing.endpoint.setLocation(x, y);
-
-    let snappedXY = pointSnap(activeDrawing.endpoint);
-    if (snappedXY !== undefined) {
-        activeDrawing.endpoint.setLocation(snappedXY.x, snappedXY.y);
-    }
-
-    if (activeDrawing instanceof Curve) {
-        activeDrawing.resetControlPoint(); //While drawing a curve we want to keep the control point in the center of the line
-    }
-}
-
-function drawUp(x, y) {
-    activeDrawing.endpoint.setLocation(x, y);
-    let snappedXY = pointSnap(activeDrawing.endpoint);
-    if (snappedXY !== undefined) {
-        activeDrawing.endpoint.setLocation(snappedXY.x, snappedXY.y);
-    }
-
-    if (activeDrawing.getLength() < 5) {
-        activeDrawing.destroy(); //Destroy lines that are too short
-    } else {
-        let id = Util.emptySlot(lines);
-        activeDrawing.setID(id);
-        lines[id] = activeDrawing;
-    }
-    if (activeDrawing instanceof Curve) {
-        activeDrawing.controlPoint.hide();
-    }
-
-    if (activeDrawing instanceof Line) {
-        activeDrawing.anchor.hide();
-        activeDrawing.endpoint.hide();
-    }
-
-    activeDrawing = null;
-    smallGrid.setAttribute('visibility', 'hidden');
-}
-
-function shiftSnap(line) {
-    let closestPoint = {x: null, y: null};
-    let closestPointDistance = Infinity;
-    let endpoint = 0; //1 for anchor, 2 for endpoint
-    for (const prim of lines) {
-        if (prim !== line) {
-            if (Util.distance(line.anchor.x, prim.anchor.x, line.anchor.y, prim.anchor.y) < closestPointDistance) {
-                closestPoint.x = prim.anchor.x;
-                closestPoint.y = prim.anchor.y;
-                closestPointDistance = Util.distance(line.anchor.x, prim.anchor.x, line.anchor.y, prim.anchor.y);
-                endpoint = 1;
-            }
-
-            if (Util.distance(line.anchor.x, prim.endpoint.x, line.anchor.y, prim.endpoint.y) < closestPointDistance) {
-                closestPoint.x = prim.endpoint.x;
-                closestPoint.y = prim.endpoint.y;
-                closestPointDistance = Util.distance(line.anchor.x, prim.endpoint.x, line.anchor.y, prim.endpoint.y);
-                endpoint = 1;
-            }
-
-            if (Util.distance(line.anchor.x, prim.centerX, line.anchor.y, prim.centerY) < closestPointDistance) { // May need to add a small (+- 2) shift to closestDistance to prefer endpoints.
-                closestPoint.x = prim.centerX;
-                closestPoint.y = prim.centerY;
-                closestPointDistance = Util.distance(line.anchor.x, prim.centerX, line.anchor.y, prim.centerY);
-                endpoint = 1;
-            }
-
-            if (Util.distance(line.endpoint.x, prim.anchor.x, line.endpoint.y, prim.anchor.y) < closestPointDistance) {
-                closestPoint.x = prim.anchor.x;
-                closestPoint.y = prim.anchor.y;
-                closestPointDistance = Util.distance(line.endpoint.x, prim.anchor.x, line.endpoint.y, prim.anchor.y);
-                endpoint = 2;
-            }
-
-            if (Util.distance(line.endpoint.x, prim.endpoint.x, line.endpoint.y, prim.endpoint.y) < closestPointDistance) {
-                closestPoint.x = prim.endpoint.x;
-                closestPoint.y = prim.endpoint.y;
-                closestPointDistance = Util.distance(line.endpoint.x, prim.endpoint.x, line.endpoint.y, prim.endpoint.y);
-                endpoint = 2;
-            }
-
-            if (Util.distance(line.endpoint.x, prim.centerX, line.endpoint.y, prim.centerY) < closestPointDistance) { // May need to add a small (+- 2) shift to closestDistance to prefer endpoints.
-                closestPoint.x = prim.centerX;
-                closestPoint.y = prim.centerY;
-                closestPointDistance = Util.distance(line.endpoint.x, prim.centerX, line.endpoint.y, prim.centerY);
-                endpoint = 2;
-            }
-        }
-    }
-    if (closestPointDistance <= 7) {
-        return {closestPoint, endpoint};
-    }
-}
-
-function pointSnap(endpoint) {
-    let x, y;
-    x = endpoint.x;
-    y = endpoint.y;
-    let closestPoint = {x: null, y: null};
-    let closestPointDistance = Infinity;
-
-    for (const prim of lines) {
-        if (prim !== endpoint.parentLine) {
-            if (Util.distance(x, prim.anchor.x, y, prim.anchor.y) < closestPointDistance) {
-                closestPointDistance = Util.distance(x, prim.anchor.x, y, prim.anchor.y);
-                closestPoint.x = prim.anchor.x;
-                closestPoint.y = prim.anchor.y;
-            }
-
-            if (Util.distance(x, prim.centerX, y, prim.centerY) < closestPointDistance) {
-                closestPointDistance = Util.distance(x, prim.centerX, y, prim.centerY);
-                closestPoint.x = prim.centerX;
-                closestPoint.y = prim.centerY;
-            }
-
-            if (Util.distance(x, prim.endpoint.x, y, prim.endpoint.y) < closestPointDistance) {
-                closestPointDistance = Util.distance(x, prim.endpoint.x, y, prim.endpoint.y);
-                closestPoint.x = prim.endpoint.x;
-                closestPoint.y = prim.endpoint.y;
-            }
-        }
-    }
-    if (closestPointDistance <= 7) {
-        return closestPoint;
-    }
-}
-
-
-function deletePrimitive(primitive) {
-    primitive.destroy();
-    lines = lines.filter(item => item !== primitive);
-}
 
 ipcRenderer.on('item:add', function(){
     //New Item
@@ -424,3 +115,124 @@ ipcRenderer.on('item:add', function(){
     element.setAttribute('fill', "none");
     g.appendChild(element);
 });
+
+function createMultiSelectRect() {
+    let multiSelectRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    multiSelectRect.setAttribute('stroke', 'gray');
+    multiSelectRect.setAttribute('fill', 'none');
+    multiSelectRect.setAttribute('stroke-dasharray', '3');
+    return multiSelectRect;
+}
+
+function createNewPOI(endpoint) {
+    for (const point of pointsOfInterest) {
+        if (point.x === endpoint.x && point.y === endpoint.y) {
+            point.endpoints.add(endpoint);
+            return point;
+        }
+    }
+    let newPoi = new POI(endpoint, poiIDCounter);
+    poiIDCounter++;
+    pointsOfInterest.add(newPoi);
+    return newPoi;
+}
+
+function createNewEdge(anchorPOI, endpointPOI, line) {
+    edges.add(new Edge(anchorPOI, endpointPOI, line));
+}
+
+
+function getPOI(endpoint) {
+    for (const point of pointsOfInterest) {
+        if (point.endpoints.has(endpoint)) {
+            return point;
+        }
+    }
+    return null;
+}
+
+function mergePOIs(master, slave) {
+    for (const point of slave.endpoints) {
+        master.endpoints.add(point);
+    }
+
+    for (const edge of getEdges(slave)) {
+        edges.delete(edge);
+        if (edge.u === slave) {
+            createNewEdge(master, edge.v, edge.line);
+        } else if (edge.v === slave) {
+            createNewEdge(edge.u, master, edge.line);
+        }
+    }
+
+    pointsOfInterest.delete(slave);
+}
+
+function getEdges(poi) {
+    let result = [];
+    for (const edge of edges) {
+        if (edge.u === poi || edge.v === poi) {
+            result.push(edge);
+        }
+    }
+    return result;
+}
+
+function getEdge(p1, p2) {
+    for (const edge of edges) {
+        if ((edge.u === p1 && edge.v === p2) || (edge.u === p2 && edge.v === p1)) {
+            return edge;
+        }
+    }
+    return null;
+}
+
+function separatePOI(poi, endpoint) {
+    let u = poi;
+    let v;
+    if (endpoint.endpointClass === epClasses.ANCHOR) {
+        v = getPOI(endpoint.parentLine.endpoint);
+    } else {
+        v = getPOI(endpoint.parentLine.anchor);
+    }
+
+    let edge = getEdge(u, v);
+    edges.delete(edge);
+    poi.removeEndpoint(endpoint);
+    createNewEdge(createNewPOI(endpoint), v, edge.line);
+}
+
+function resolvePOIs(selection) {
+    let pointsToResolve = [];
+    for (const prim of selection.primitives) {
+        if (prim instanceof Line) {
+            let p = getPOI(prim.anchor);
+            if (p !== null) {
+                pointsToResolve.push({poi: p, endpoint: prim.anchor});
+            }
+            p = getPOI(prim.endpoint);
+            if (p !== null) {
+                pointsToResolve.push({poi: p, endpoint: prim.endpoint});
+            }
+        } else if (prim instanceof Endpoint) {
+            let p = getPOI(prim);
+            if (p !== null) {
+                pointsToResolve.push({poi: p, endpoint: prim});
+            }
+        }
+    }
+
+    for (const pointObject of pointsToResolve) {
+        let filter = pointsToResolve.filter(item => item.poi === pointObject.poi);
+        if (filter.length === pointObject.poi.endpoints.size) {
+            pointObject.poi.move(pointObject.endpoint.x, pointObject.endpoint.y);
+            for (const point of pointsOfInterest) {
+                if (point !== pointObject.poi && point.x === pointObject.poi.x && point.y === pointObject.poi.y) {
+                    mergePOIs(point, pointObject.poi);
+                }
+            }
+        } else {
+            separatePOI(pointObject.poi, pointObject.endpoint);
+        }
+    }
+}

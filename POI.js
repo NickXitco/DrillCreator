@@ -6,18 +6,20 @@ class POI {
     deleteFlag = false;
 
 
-    constructor(x, y) {
+    constructor(endpoint, id) {
+        this.x = endpoint.x;
+        this.y = endpoint.y;
+        this.endpoints.add(endpoint);
+        this.id = id;
+    }
+
+    move(x, y) {
         this.x = x;
         this.y = y;
     }
 
-    removeLine(line) {
-        this.endpoints.delete(line.anchor);
-        this.endpoints.delete(line.endpoint);
-
-        if (this.endpoints.size < 1) {
-            this.destroy();
-        }
+    removeEndpoint(endpoint) {
+        return this.endpoints.delete(endpoint);
     }
 
     destroy() {

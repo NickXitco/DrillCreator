@@ -5,6 +5,7 @@ class POI {
     endpoints = new Set();
     deleteFlag = false;
 
+    discovered = false; //For use in searches
 
     constructor(endpoint, id) {
         this.x = endpoint.x;

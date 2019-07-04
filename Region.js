@@ -1,12 +1,12 @@
 class Region extends Canvas_Primitive {
-    path = [];
+    path = []; //IN ORDER array of edges that make up the region.
 
     idText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
     idX;
     idY;
 
     constructor(path) {
-        super(path[0].x, path[0].y, "#cccccc");
+        super(path[0].u.x, path[0].u.y, "#cccccc");
         this.path = path;
         this.idText.setAttribute('text-anchor', "middle");
         this.idText.setAttribute('style', "font: 10px sans-serif; fill: blue");
@@ -14,22 +14,19 @@ class Region extends Canvas_Primitive {
     }
 
     updateD() {
-        this.d = "M" + this.x + " " + this.y;
-        console.log(this.path);
+        this.d = this.path[0].line.d;
         for (let i = 1; i < this.path.length; i++) {
-            if (this.path[i].primitives[0] instanceof Curve) {
-                this.d += " Q" + this.path[i].primitives[0].controlPoint.x + " " + this.path[i].primitives[0].controlPoint.y + " " + this.path[i].x + " " + this.path[i].y;
-            } else {
-                this.d += " L" + this.path[i].x + " " + this.path[i].y;
+            let split = this.path[i].line.d.split(" ");
+            for (let j = 2; j < split.length; j++) {
+                this.d += " " + split[j];
             }
         }
-        if (this.path[0].primitives[0] instanceof Curve) {
-            this.d += " Q" + this.path[0].primitives[0].controlPoint.x + " " + this.path[0].primitives[0].controlPoint.y + " " + this.x + " " + this.y;
-        } else {
-            this.d += " L" + this.x + " " + this.y;
+        let split = this.path[0].line.d.split(" ");
+        for (let j = 2; j < split.length; j++) {
+            this.d += " " + split[j];
         }
         this.svg.setAttribute('d', this.d);
-        this.updateCenter();
+        //this.updateCenter();
     }
 
     render() {

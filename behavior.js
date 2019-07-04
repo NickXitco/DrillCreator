@@ -21,8 +21,10 @@ let gridMultiple = 1;
 let lines = [];
 let pointsOfInterest = new Set();
 let poiIDCounter = 0;
+//let edgeIDCounter = 0; //Don't forget to change these when we get into loading files, because they'll reset every time
+                       //this code is run, which would cause problems if we ever use the IDs (which we do, and should).
 let edges = new Set();
-
+let regions = new Set();
 
 /*
 let keyframes = [];
@@ -93,16 +95,17 @@ svgCanvas.onmouseup = function(e) {
         let anchorPOI = createNewPOI(activeDrawing.drawing.anchor);
         let endpointPOI = createNewPOI(activeDrawing.drawing.endpoint);
         createNewEdge(anchorPOI, endpointPOI, activeDrawing.drawing);
+        handleRegionCreation([activeDrawing.drawing]);
         activeDrawing.drawing = null;
         activeDrawing.type = null;
     } else if (e.button === 0 && currentTool === tools.SELECT) {
         selectUp(bools, selection, lines);
-        resolvePOIs(selection);
+        handleRegionDeletion(selection.primitives);
+        resolvePOIs(selection.primitives);
+        handleRegionCreation(selection.primitives);
     } else if (e.button === 1) {
         panZoomCanvas.disablePan();
     }
-    console.log(pointsOfInterest);
-    console.log(edges);
 };
 
 ipcRenderer.on('item:add', function(){
@@ -141,7 +144,6 @@ function createNewEdge(anchorPOI, endpointPOI, line) {
     edges.add(new Edge(anchorPOI, endpointPOI, line));
 }
 
-
 function getPOI(endpoint) {
     for (const point of pointsOfInterest) {
         if (point.endpoints.has(endpoint)) {
@@ -178,13 +180,40 @@ function getEdges(poi) {
     return result;
 }
 
-function getEdge(p1, p2) {
+function getEdge(poi1, poi2) {
     for (const edge of edges) {
-        if ((edge.u === p1 && edge.v === p2) || (edge.u === p2 && edge.v === p1)) {
+        if ((edge.u === poi1 && edge.v === poi2) || (edge.u === poi2 && edge.v === poi1)) {
             return edge;
         }
     }
     return null;
+}
+
+/***
+ * Gets all regions incident to a given edge
+ * @param edge
+ * @returns {Array} Incident regions
+ */
+function getRegions(edge) {
+    let incidentRegions = [];
+    for (const region of regions) {
+        if (region.path.includes(edge)) {
+            incidentRegions.push(region);
+        }
+    }
+    return incidentRegions;
+}
+
+function getNeighbors(poi) {
+    let neighbors = [];
+    for (const edge of edges) {
+        if (edge.u === poi) {
+            neighbors.push(edge.v);
+        } else if (edge.v === poi) {
+            neighbors.push(edge.u);
+        }
+    }
+    return neighbors;
 }
 
 function separatePOI(poi, endpoint) {
@@ -202,9 +231,13 @@ function separatePOI(poi, endpoint) {
     createNewEdge(createNewPOI(endpoint), v, edge.line);
 }
 
+/***
+ *
+ * @param {Array} selection
+ */
 function resolvePOIs(selection) {
     let pointsToResolve = [];
-    for (const prim of selection.primitives) {
+    for (const prim of selection) {
         if (prim instanceof Line) {
             let p = getPOI(prim.anchor);
             if (p !== null) {
@@ -235,4 +268,161 @@ function resolvePOIs(selection) {
             separatePOI(pointObject.poi, pointObject.endpoint);
         }
     }
+}
+
+
+/***
+ * Converts a path of POIs to a path of edges
+ * @param {Array} newRegion array of POIs defining a closed cycle
+ * @returns {Array} newRegionEdges array of edges defining the same cycle
+ */
+function convertPath(newRegion) {
+    let newRegionEdges = [];
+    for (let i = 0; i < newRegion.length; i++) {
+        if (i + 1 === newRegion.length) {
+            newRegionEdges.push(getEdge(newRegion[i], newRegion[0]));
+        } else {
+            newRegionEdges.push(getEdge(newRegion[i], newRegion[i + 1]));
+        }
+    }
+    return newRegionEdges;
+}
+
+/***
+ * Creates new region(s) based on a selection of lines/endpoints.
+ * @param {Array} selection a collection (sometimes and usually only 1) line.
+ */
+function handleRegionCreation(selection) {
+    for (const prim of selection) {
+        let edge;
+        if (prim instanceof Line) {
+            edge = getEdge(getPOI(prim.anchor), getPOI(prim.endpoint));
+        } else if (prim instanceof Endpoint) {
+            if (prim.endpointClass === epClasses.ANCHOR) {
+                edge = getEdge(getPOI(prim), getPOI(prim.parentLine.endpoint));
+            } else {
+                edge = getEdge(getPOI(prim.parentLine.anchor), getPOI(prim));
+            }
+        }
+        let validRegions = []; //2D array of in order edges
+        if (edge.u.endpoints.size > 1 && edge.v.endpoints.size > 1) {
+            validRegions = regionSearch(edge, validRegions);
+        }
+
+        for (const newRegion of validRegions) {
+            let r = new Region(convertPath(newRegion));
+            r.render();
+            regions.add(r);
+        }
+    }
+    //TODO handle splitting edges
+}
+
+/***
+ * Properly deletes any region involved with a selection of lines/endpoints
+ * @param {Array} selection a collection (sometimes and usually only 1) line.
+ */
+function handleRegionDeletion(selection) {
+    for (const prim of selection) {
+        let edge;
+        if (prim instanceof Line) {
+            edge = getEdge(getPOI(prim.anchor), getPOI(prim.endpoint));
+        } else if (prim instanceof Endpoint) {
+            if (prim.endpointClass === epClasses.ANCHOR) {
+                edge = getEdge(getPOI(prim), getPOI(prim.parentLine.endpoint));
+            } else {
+                edge = getEdge(getPOI(prim.parentLine.anchor), getPOI(prim));
+            }
+        }
+
+        let incidentRegions = getRegions(edge);
+        for (const region of incidentRegions) {
+            regions.delete(region);
+            region.destroy();
+        }
+    }
+    //TODO handle splitting edges
+}
+
+/***
+ * Checks if a path envelops the center of another line, and is therefore invalid.
+ * @param {Array} path array of POIs defining a closed cycle
+ * @returns {boolean} if a path is valid (true) or not (false)
+ */
+function validPath(path) {
+    //TODO this is wrong because we care about CENTERS, not points.
+    for (const point of pointsOfInterest) {
+        if (!path.includes(point)) {
+            let counter = 0;
+            let i;
+            let intersection;
+            let p1, p2;
+
+            p1 = path[0];
+            for (i = 1; i <= path.length; i++) {
+                p2 = path[i % path.length];
+                if (point.y > Math.min(p1.y, p2.y) && point.y <= Math.max(p1.y, p2.y)) {
+                    if (point.x <= Math.max(p1.x, p2.x)) {
+                        if (p1.y !== p2.y) {
+                            intersection = (point.y - p1.y) * (p2.x - p1.x) / (p2.y - p1.y) + p1.x;
+                            if (p1.x === p2.x || point.x <= intersection) {
+                                counter++;
+                            }
+                        }
+                    }
+                }
+                p1 = p2;
+            }
+
+            if (counter % 2 !== 0) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+/***
+ * Basically runs many searches from an edge, and returns at most 2 valid cycles.
+ * @param edge
+ * @param validRegions
+ * @returns {Array} validRegions Array of shortest incident cycles (Max size of 2)
+ */
+function regionSearch(edge, validRegions) {
+    let source = edge.u;
+    let dest = edge.v;
+    edges.delete(edge); //Temporary removal so we can't shortcut the cycle backwards.
+
+    let paths = [];
+    DFS(source, []);
+    // START DFS
+    function DFS(v, path) {
+        for (const neighbor of getNeighbors(v)) {
+            if (!path.includes(neighbor)) {
+                if (neighbor === dest) {
+                    path.push(v);
+                    path.push(dest);
+                    if (validPath(path)) {
+                        paths.push(path);
+                    }
+                    return;
+                }
+                //Clone the current path, add the new node, and push it along
+                let fork = [...path];
+                fork.push(v);
+                DFS(neighbor, fork);
+            }
+        }
+    }
+    // END DFS
+
+    if (paths.length > 2) {
+        console.log("what the fuck did you do wrong???");
+        console.log(paths);
+    } else {
+        validRegions = paths;
+        console.log({validRegions});
+    }
+    edges.add(edge);
+    return validRegions;
 }

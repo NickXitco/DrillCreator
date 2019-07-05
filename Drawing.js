@@ -46,6 +46,8 @@ function drawUp(x, y, activeDrawing, lines) {
 
     if (activeDrawing.type === Curve) {
         activeDrawing.drawing.controlPoint.hide();
+        activeDrawing.drawing.anchor.hide();
+        activeDrawing.drawing.endpoint.hide();
     }
 
     if (activeDrawing.type === Line) {

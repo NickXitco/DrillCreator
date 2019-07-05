@@ -21,8 +21,6 @@ let gridMultiple = 1;
 let lines = [];
 let pointsOfInterest = new Set();
 let poiIDCounter = 0;
-//let edgeIDCounter = 0; //Don't forget to change these when we get into loading files, because they'll reset every time
-                       //this code is run, which would cause problems if we ever use the IDs (which we do, and should).
 let edges = new Set();
 let regions = new Set();
 
@@ -100,9 +98,18 @@ svgCanvas.onmouseup = function(e) {
         activeDrawing.type = null;
     } else if (e.button === 0 && currentTool === tools.SELECT) {
         selectUp(bools, selection, lines);
-        handleRegionDeletion(selection.primitives);
-        resolvePOIs(selection.primitives);
-        handleRegionCreation(selection.primitives);
+        if (selection.primitives.length === 1 && selection.primitives[0] instanceof Point) {
+            let edge = getEdge(getPOI(selection.primitives[0].parentLine.anchor), getPOI(selection.primitives[0].parentLine.endpoint));
+            console.log({edge});
+            let regionsToUpdate = getRegions(edge);
+            for (const region of regionsToUpdate) {
+                region.updateD();
+            }
+        } else {
+            handleRegionDeletion(selection.primitives);
+            resolvePOIs(selection.primitives);
+            handleRegionCreation(selection.primitives);
+        }
     } else if (e.button === 1) {
         panZoomCanvas.disablePan();
     }
@@ -197,7 +204,7 @@ function getEdge(poi1, poi2) {
 function getRegions(edge) {
     let incidentRegions = [];
     for (const region of regions) {
-        if (region.path.includes(edge)) {
+        if (region.edges.includes(edge)) {
             incidentRegions.push(region);
         }
     }
@@ -276,7 +283,7 @@ function resolvePOIs(selection) {
  * @param {Array} newRegion array of POIs defining a closed cycle
  * @returns {Array} newRegionEdges array of edges defining the same cycle
  */
-function convertPath(newRegion) {
+function poiPathToEdges(newRegion) {
     let newRegionEdges = [];
     for (let i = 0; i < newRegion.length; i++) {
         if (i + 1 === newRegion.length) {
@@ -286,6 +293,33 @@ function convertPath(newRegion) {
         }
     }
     return newRegionEdges;
+}
+
+// noinspection JSUnusedLocalSymbols
+/***
+ * Converts a path of edges to a path of POIs
+ * @param {Array} path array of edges defining a closed cycle
+ * @returns {Array} newPathPOIs array of POIs defining the same cycle
+ */
+function edgePathToPOIs(path) {
+    let newPathPOIs = [];
+    //find common node between first and last edge
+    let node;
+    if (path[0].u === path[path.length - 1].u || path[0].u === path[path.length - 1].v) {
+        node = path[0].u;
+    } else if (path[0].v === path[path.length - 1].u || path[0].v === path[path.length - 1].v) {
+        node = path[0].v;
+    }
+    newPathPOIs.push(node);
+    for (let i = 0; i < path.length - 1; i++) {
+        if (path[i].u === node) {
+            node = path[i].v;
+        } else {
+            node = path[i].u;
+        }
+        newPathPOIs.push(node);
+    }
+    return newPathPOIs;
 }
 
 /***
@@ -309,8 +343,8 @@ function handleRegionCreation(selection) {
             validRegions = regionSearch(edge, validRegions);
         }
 
-        for (const newRegion of validRegions) {
-            let r = new Region(convertPath(newRegion));
+        for (const poiPath of validRegions) {
+            let r = new Region(poiPath, poiPathToEdges(poiPath));
             r.render();
             regions.add(r);
         }
@@ -334,7 +368,6 @@ function handleRegionDeletion(selection) {
                 edge = getEdge(getPOI(prim.parentLine.anchor), getPOI(prim));
             }
         }
-
         let incidentRegions = getRegions(edge);
         for (const region of incidentRegions) {
             regions.delete(region);
@@ -350,9 +383,10 @@ function handleRegionDeletion(selection) {
  * @returns {boolean} if a path is valid (true) or not (false)
  */
 function validPath(path) {
-    //TODO this is wrong because we care about CENTERS, not points.
-    for (const point of pointsOfInterest) {
-        if (!path.includes(point)) {
+    let edgePath = poiPathToEdges(path);
+    for (const edge of edges) {
+        if (!edgePath.includes(edge)) {
+            let point = {x: edge.line.centerX, y: edge.line.centerY};
             let counter = 0;
             let i;
             let intersection;
@@ -382,6 +416,21 @@ function validPath(path) {
     return true;
 }
 
+function regionExists(path) {
+    for (const region of regions) {
+        let counter = 0;
+        for (const poi of path) {
+            if (region.poiPath.includes(poi)) {
+                counter++;
+            }
+        }
+        if (counter === path.length) {
+            return true;
+        }
+    }
+    return false;
+}
+
 /***
  * Basically runs many searches from an edge, and returns at most 2 valid cycles.
  * @param edge
@@ -398,31 +447,32 @@ function regionSearch(edge, validRegions) {
     // START DFS
     function DFS(v, path) {
         for (const neighbor of getNeighbors(v)) {
-            if (!path.includes(neighbor)) {
+            if (!path.includes(getEdge(v, neighbor))) {
                 if (neighbor === dest) {
-                    path.push(v);
-                    path.push(dest);
-                    if (validPath(path)) {
-                        paths.push(path);
-                    }
+                    path.push(getEdge(v, neighbor));
+                    path.push(edge); //Push the deleted src-dest edge
+                    paths.push(path);
                     return;
                 }
-                //Clone the current path, add the new node, and push it along
+                //Clone the current path, add the new edge, and push it along
                 let fork = [...path];
-                fork.push(v);
+                fork.push(getEdge(v, neighbor));
                 DFS(neighbor, fork);
             }
         }
     }
     // END DFS
-
-    if (paths.length > 2) {
-        console.log("what the fuck did you do wrong???");
-        console.log(paths);
-    } else {
-        validRegions = paths;
-        console.log({validRegions});
-    }
     edges.add(edge);
+    console.log({paths});
+    for (const path of paths) {
+        let convert = edgePathToPOIs(path);
+        if (validPath(convert) && !regionExists(convert)) {
+            validRegions.push(convert);
+        }
+    }
+
+    if (validRegions.length > 2) {
+        console.log("what the fuck did you do wrong???");
+    }
     return validRegions;
 }

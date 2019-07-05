@@ -191,6 +191,7 @@
         };
 
         function deleteSelection(selection) {
+            handleRegionDeletion(selection.primitives);
             for (const prim of selection.primitives) {
                 let deletable = prim;
                 if (deletable instanceof Point) {
@@ -213,6 +214,9 @@
             }
             lines = lines.filter(item => !selection.primitives.includes(item));
             selection.primitives = [];
+            console.log({edges});
+            console.log({regions});
+            console.log({pointsOfInterest});
         }
 
         function gridCheckboxClick() {

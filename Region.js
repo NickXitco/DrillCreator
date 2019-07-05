@@ -1,32 +1,36 @@
 class Region extends Canvas_Primitive {
-    path = []; //IN ORDER array of edges that make up the region.
+    poiPath = []; //IN ORDER array of edges that make up the region.
+    edges = [];
 
     idText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
     idX;
     idY;
 
-    constructor(path) {
-        super(path[0].u.x, path[0].u.y, "#cccccc");
-        this.path = path;
+    constructor(poiPath, edgePath) {
+        super(poiPath[0].x, poiPath[0].y, "#cccccc");
+        this.poiPath = poiPath;
+        this.edges = edgePath;
         this.idText.setAttribute('text-anchor', "middle");
         this.idText.setAttribute('style', "font: 10px sans-serif; fill: blue");
         this.idText.innerHTML = "A1b";
     }
 
     updateD() {
-        this.d = this.path[0].line.d;
-        for (let i = 1; i < this.path.length; i++) {
-            let split = this.path[i].line.d.split(" ");
-            for (let j = 2; j < split.length; j++) {
-                this.d += " " + split[j];
+        let node = this.poiPath[0];
+        this.d = "M " + node.x + " " + node.y;
+
+        for (let i = 1; i < this.poiPath.length + 1; i++) {
+            let edge = this.getEdge(node, this.poiPath[i % this.poiPath.length]);
+            node = this.poiPath[i % this.poiPath.length];
+            if (edge.line instanceof Curve) {
+                this.d += " Q " + edge.line.controlPoint.x + " " + edge.line.controlPoint.y + " " + node.x + " " + node.y;
+            } else {
+                this.d += " L " + node.x + " " + node.y;
             }
         }
-        let split = this.path[0].line.d.split(" ");
-        for (let j = 2; j < split.length; j++) {
-            this.d += " " + split[j];
-        }
+        console.log(this.d);
         this.svg.setAttribute('d', this.d);
-        //this.updateCenter();
+        this.updateCenter();
     }
 
     render() {
@@ -39,10 +43,19 @@ class Region extends Canvas_Primitive {
         this.g.appendChild(this.idText);
     }
 
+    getEdge(poi1, poi2) {
+        for (const edge of this.edges) {
+            if ((edge.u === poi1 && edge.v === poi2) || (edge.u === poi2 && edge.v === poi1)) {
+                return edge;
+            }
+        }
+        return null;
+    }
+
     updateCenter() {
         let polygon = [];
-        for (const node of this.path) {
-            polygon.push([node.x, node.y]);
+        for (const poi of this.poiPath) {
+            polygon.push([poi.x, poi.y]);
         }
         [this.idX, this.idY] = Util.vizCenter([polygon]);
         this.idText.setAttribute('x', this.idX);

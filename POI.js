@@ -2,28 +2,28 @@ class POI {
     id;
     x;
     y;
-    primitives = new Set();
-    neighbors = new Set();
+    endpoints = new Set();
     deleteFlag = false;
 
+    discovered = false; //For use in searches
 
-    constructor(x, y) {
+    constructor(endpoint, id) {
+        this.x = endpoint.x;
+        this.y = endpoint.y;
+        this.endpoints.add(endpoint);
+        this.id = id;
+    }
+
+    move(x, y) {
         this.x = x;
         this.y = y;
     }
 
-    removeLine(line) {
-        let inc = this.primitives.delete(line);
-        if (this.primitives.size < 2) {
-            this.destroy();
-        }
-        return inc;
+    removeEndpoint(endpoint) {
+        return this.endpoints.delete(endpoint);
     }
 
     destroy() {
-        for (const neighbor of this.neighbors) {
-            neighbor.neighbors.delete(this);
-        }
         this.deleteFlag = true;
     }
 }

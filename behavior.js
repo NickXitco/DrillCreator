@@ -338,6 +338,7 @@ function handleRegionCreation(selection) {
                 edge = getEdge(getPOI(prim.parentLine.anchor), getPOI(prim));
             }
         }
+
         let validRegions = []; //2D array of in order edges
         if (edge.u.endpoints.size > 1 && edge.v.endpoints.size > 1) {
             validRegions = regionSearch(edge, validRegions);

@@ -211,12 +211,14 @@
                     p.removeEndpoint(deletable.endpoint);
                 }
                 deletable.destroy();
+
+                for (const i in lines) {
+                    if (lines[i] === deletable) {
+                        delete lines[i];
+                    }
+                }
             }
-            lines = lines.filter(item => !selection.primitives.includes(item));
             selection.primitives = [];
-            console.log({edges});
-            console.log({regions});
-            console.log({pointsOfInterest});
         }
 
         function gridCheckboxClick() {

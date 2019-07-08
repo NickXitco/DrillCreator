@@ -5,16 +5,18 @@ function multiSelect(selection, bools, lines) {
     const yMax = parseInt(selection.rect.getAttribute('height')) + yMin;
 
     for (const prim of lines) {
-        if (prim instanceof Line) {
-            if (prim.x >= xMin && prim.x <= xMax && prim.endpointX >= xMin && prim.endpointX <= xMax && prim.y >= yMin && prim.y <= yMax && prim.endpointY >= yMin && prim.endpointY <= yMax) {
-                selection.primitives.push(prim);
-                prim.highlightOn();
-            } else if (prim.x >= xMin && prim.x <= xMax && prim.y >= yMin && prim.y <= yMax) {
-                selection.primitives.push(prim.anchor);
-                prim.anchor.show();
-            } else if (prim.endpointX >= xMin && prim.endpointX <= xMax && prim.endpointY >= yMin && prim.endpointY <= yMax) {
-                selection.primitives.push(prim.endpoint);
-                prim.endpoint.show();
+        if (prim !== undefined) {
+            if (prim instanceof Line) {
+                if (prim.x >= xMin && prim.x <= xMax && prim.endpointX >= xMin && prim.endpointX <= xMax && prim.y >= yMin && prim.y <= yMax && prim.endpointY >= yMin && prim.endpointY <= yMax) {
+                    selection.primitives.push(prim);
+                    prim.highlightOn();
+                } else if (prim.x >= xMin && prim.x <= xMax && prim.y >= yMin && prim.y <= yMax) {
+                    selection.primitives.push(prim.anchor);
+                    prim.anchor.show();
+                } else if (prim.endpointX >= xMin && prim.endpointX <= xMax && prim.endpointY >= yMin && prim.endpointY <= yMax) {
+                    selection.primitives.push(prim.endpoint);
+                    prim.endpoint.show();
+                }
             }
         }
     }

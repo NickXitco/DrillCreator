@@ -43,7 +43,6 @@ class Canvas_Primitive {
     destroy() {
         this.g.removeChild(this.svg);
         this.g.removeChild(this.expandedSVG);
-        delete this.svg;
     }
 
     setID(id) {

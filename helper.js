@@ -197,47 +197,49 @@ class Util {
         let closestPointDistance = Infinity;
         let endpoint = 0; //1 for anchor, 2 for endpoint
         for (const prim of lines) {
-            if (prim !== line) {
-                if (this.distance(line.anchor.x, prim.anchor.x, line.anchor.y, prim.anchor.y) < closestPointDistance) {
-                    closestPoint.x = prim.anchor.x;
-                    closestPoint.y = prim.anchor.y;
-                    closestPointDistance = this.distance(line.anchor.x, prim.anchor.x, line.anchor.y, prim.anchor.y);
-                    endpoint = 1;
-                }
+            if (prim !== undefined) {
+                if (prim !== line) {
+                    if (this.distance(line.anchor.x, prim.anchor.x, line.anchor.y, prim.anchor.y) < closestPointDistance) {
+                        closestPoint.x = prim.anchor.x;
+                        closestPoint.y = prim.anchor.y;
+                        closestPointDistance = this.distance(line.anchor.x, prim.anchor.x, line.anchor.y, prim.anchor.y);
+                        endpoint = 1;
+                    }
 
-                if (this.distance(line.anchor.x, prim.endpoint.x, line.anchor.y, prim.endpoint.y) < closestPointDistance) {
-                    closestPoint.x = prim.endpoint.x;
-                    closestPoint.y = prim.endpoint.y;
-                    closestPointDistance = this.distance(line.anchor.x, prim.endpoint.x, line.anchor.y, prim.endpoint.y);
-                    endpoint = 1;
-                }
+                    if (this.distance(line.anchor.x, prim.endpoint.x, line.anchor.y, prim.endpoint.y) < closestPointDistance) {
+                        closestPoint.x = prim.endpoint.x;
+                        closestPoint.y = prim.endpoint.y;
+                        closestPointDistance = this.distance(line.anchor.x, prim.endpoint.x, line.anchor.y, prim.endpoint.y);
+                        endpoint = 1;
+                    }
 
-                if (this.distance(line.anchor.x, prim.centerX, line.anchor.y, prim.centerY) < closestPointDistance) { // May need to add a small (+- 2) shift to closestDistance to prefer endpoints.
-                    closestPoint.x = prim.centerX;
-                    closestPoint.y = prim.centerY;
-                    closestPointDistance = this.distance(line.anchor.x, prim.centerX, line.anchor.y, prim.centerY);
-                    endpoint = 1;
-                }
+                    if (this.distance(line.anchor.x, prim.centerX, line.anchor.y, prim.centerY) < closestPointDistance) { // May need to add a small (+- 2) shift to closestDistance to prefer endpoints.
+                        closestPoint.x = prim.centerX;
+                        closestPoint.y = prim.centerY;
+                        closestPointDistance = this.distance(line.anchor.x, prim.centerX, line.anchor.y, prim.centerY);
+                        endpoint = 1;
+                    }
 
-                if (this.distance(line.endpoint.x, prim.anchor.x, line.endpoint.y, prim.anchor.y) < closestPointDistance) {
-                    closestPoint.x = prim.anchor.x;
-                    closestPoint.y = prim.anchor.y;
-                    closestPointDistance = this.distance(line.endpoint.x, prim.anchor.x, line.endpoint.y, prim.anchor.y);
-                    endpoint = 2;
-                }
+                    if (this.distance(line.endpoint.x, prim.anchor.x, line.endpoint.y, prim.anchor.y) < closestPointDistance) {
+                        closestPoint.x = prim.anchor.x;
+                        closestPoint.y = prim.anchor.y;
+                        closestPointDistance = this.distance(line.endpoint.x, prim.anchor.x, line.endpoint.y, prim.anchor.y);
+                        endpoint = 2;
+                    }
 
-                if (this.distance(line.endpoint.x, prim.endpoint.x, line.endpoint.y, prim.endpoint.y) < closestPointDistance) {
-                    closestPoint.x = prim.endpoint.x;
-                    closestPoint.y = prim.endpoint.y;
-                    closestPointDistance = this.distance(line.endpoint.x, prim.endpoint.x, line.endpoint.y, prim.endpoint.y);
-                    endpoint = 2;
-                }
+                    if (this.distance(line.endpoint.x, prim.endpoint.x, line.endpoint.y, prim.endpoint.y) < closestPointDistance) {
+                        closestPoint.x = prim.endpoint.x;
+                        closestPoint.y = prim.endpoint.y;
+                        closestPointDistance = this.distance(line.endpoint.x, prim.endpoint.x, line.endpoint.y, prim.endpoint.y);
+                        endpoint = 2;
+                    }
 
-                if (this.distance(line.endpoint.x, prim.centerX, line.endpoint.y, prim.centerY) < closestPointDistance) { // May need to add a small (+- 2) shift to closestDistance to prefer endpoints.
-                    closestPoint.x = prim.centerX;
-                    closestPoint.y = prim.centerY;
-                    closestPointDistance = this.distance(line.endpoint.x, prim.centerX, line.endpoint.y, prim.centerY);
-                    endpoint = 2;
+                    if (this.distance(line.endpoint.x, prim.centerX, line.endpoint.y, prim.centerY) < closestPointDistance) { // May need to add a small (+- 2) shift to closestDistance to prefer endpoints.
+                        closestPoint.x = prim.centerX;
+                        closestPoint.y = prim.centerY;
+                        closestPointDistance = this.distance(line.endpoint.x, prim.centerX, line.endpoint.y, prim.centerY);
+                        endpoint = 2;
+                    }
                 }
             }
         }
@@ -254,23 +256,25 @@ class Util {
         let closestPointDistance = Infinity;
 
         for (const prim of lines) {
-            if (prim !== endpoint.parentLine) {
-                if (this.distance(x, prim.anchor.x, y, prim.anchor.y) < closestPointDistance) {
-                    closestPointDistance = this.distance(x, prim.anchor.x, y, prim.anchor.y);
-                    closestPoint.x = prim.anchor.x;
-                    closestPoint.y = prim.anchor.y;
-                }
+            if (prim !== undefined) {
+                if (prim !== endpoint.parentLine) {
+                    if (this.distance(x, prim.anchor.x, y, prim.anchor.y) < closestPointDistance) {
+                        closestPointDistance = this.distance(x, prim.anchor.x, y, prim.anchor.y);
+                        closestPoint.x = prim.anchor.x;
+                        closestPoint.y = prim.anchor.y;
+                    }
 
-                if (this.distance(x, prim.centerX, y, prim.centerY) < closestPointDistance) {
-                    closestPointDistance = this.distance(x, prim.centerX, y, prim.centerY);
-                    closestPoint.x = prim.centerX;
-                    closestPoint.y = prim.centerY;
-                }
+                    if (this.distance(x, prim.centerX, y, prim.centerY) < closestPointDistance) {
+                        closestPointDistance = this.distance(x, prim.centerX, y, prim.centerY);
+                        closestPoint.x = prim.centerX;
+                        closestPoint.y = prim.centerY;
+                    }
 
-                if (this.distance(x, prim.endpoint.x, y, prim.endpoint.y) < closestPointDistance) {
-                    closestPointDistance = this.distance(x, prim.endpoint.x, y, prim.endpoint.y);
-                    closestPoint.x = prim.endpoint.x;
-                    closestPoint.y = prim.endpoint.y;
+                    if (this.distance(x, prim.endpoint.x, y, prim.endpoint.y) < closestPointDistance) {
+                        closestPointDistance = this.distance(x, prim.endpoint.x, y, prim.endpoint.y);
+                        closestPoint.x = prim.endpoint.x;
+                        closestPoint.y = prim.endpoint.y;
+                    }
                 }
             }
         }

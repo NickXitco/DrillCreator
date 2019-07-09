@@ -63,7 +63,7 @@ function selectDown(e, x, y, down, bools, selection) {
     down.y = y;
     if (e.target.id !== "gridRect" && e.target.id !== "svgMain") {
         //User clicked something
-        if (selection.primitives.length > 1) { //TODO refine this condition, right now it's just not even correct.
+        if (selection.primitives.length > 1 && selection.primitives.includes($(e.target).data().self)) { //TODO refine this condition, right now it's just not even correct.
             bools.movingSelection = true;
         } else {
             deselect(selection);

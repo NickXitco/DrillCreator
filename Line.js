@@ -66,6 +66,7 @@ class Line extends Canvas_Primitive {
     destroy() {
         this.endpoint.destroy();
         this.anchor.destroy();
+        this.g.removeChild(this.expandedSVG);
         super.destroy();
     }
 

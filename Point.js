@@ -7,7 +7,7 @@ class Point {
     self = this;
 
     id;
-    visibility;
+    visibility = true;
 
     active = false;
 
@@ -45,17 +45,21 @@ class Point {
     }
 
     show() {
+        if (this.visibility === false) {
+            this.g.appendChild(this.svg);
+        }
         this.visibility = true;
-        this.svg.setAttribute('visibility', "visible");
     }
 
     hide() {
+        if (this.visibility === true) {
+            this.g.removeChild(this.svg);
+        }
         this.visibility = false;
-        this.svg.setAttribute('visibility', "hidden");
     }
 
     destroy() {
-        this.g.removeChild(this.svg);
+        this.hide();
     }
 
     shift(dx, dy) {

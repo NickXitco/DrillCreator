@@ -53,13 +53,14 @@ function panCheck(oldPan, newPan) {
     return customPan;
 }
 
-svgCanvas.onmousedown = function(e){
+canvasDiv.onmousedown = function(e){
     let {x, y} = Util.virtualRoundedXY(e, svgCanvas, g, gridMultiple);
     x = parseInt(x);
     y = parseInt(y);
     if (e.button === 0 && (currentTool === tools.LINE || currentTool === tools.CURVE)) {
         drawDown(x, y, activeDrawing, lines);
     } else if (e.button === 0 && (currentTool === tools.SELECT)) {
+        canvasDiv.style.cursor = "grabbing";
         selectDown(e, x, y, down, bools, selection);
     } else if (e.button === 1) {
         //middle click
@@ -67,7 +68,7 @@ svgCanvas.onmousedown = function(e){
     }
 };
 
-svgCanvas.onmousemove = function(e) {
+canvasDiv.onmousemove = function(e) {
     let {x, y} = Util.virtualRoundedXY(e, svgCanvas, g, gridMultiple);
     x = parseInt(x);
     y = parseInt(y);
@@ -84,7 +85,7 @@ svgCanvas.onmousemove = function(e) {
     }
 };
 
-svgCanvas.onmouseup = function(e) {
+canvasDiv.onmouseup = function(e) {
     let {x, y} = Util.virtualRoundedXY(e, svgCanvas, g, gridMultiple);
     x = parseInt(x);
     y = parseInt(y);
@@ -113,7 +114,31 @@ svgCanvas.onmouseup = function(e) {
     } else if (e.button === 1) {
         panZoomCanvas.disablePan();
     }
+    canvasDiv.style.cursor = "default";
 };
+
+/*
+Use this function if for some reason in the future we want to implement edge panning.
+
+document.onmousemove = function(e) {
+    if (!e.path.includes(canvasDiv)) {
+        //Not in Canvas;
+    } else {
+        //In Canvas
+    }
+};
+*/
+
+document.onmouseup = function(e) {
+    if (!e.path.includes(canvasDiv)) {
+        if (activeDrawing.drawing != null) {
+            activeDrawing.drawing.destroy();
+            activeDrawing.drawing = null;
+            activeDrawing.type = null;
+        }
+    }
+};
+
 
 ipcRenderer.on('item:add', function(){
     //New Item
@@ -464,7 +489,6 @@ function regionSearch(edge, validRegions) {
     }
     // END DFS
     edges.add(edge);
-    console.log({paths});
     for (const path of paths) {
         let convert = edgePathToPOIs(path);
         if (validPath(convert) && !regionExists(convert)) {

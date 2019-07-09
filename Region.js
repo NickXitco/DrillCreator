@@ -15,6 +15,14 @@ class Region extends Canvas_Primitive {
         this.idText.innerHTML = "A1b";
     }
 
+    hoverOn() {
+        $(this).data().self.svg.setAttribute('fill', "#00bbbb");
+    }
+
+    hoverOff() {
+        $(this).data().self.svg.setAttribute('fill', $(this).data().self.color);
+    }
+
     updateD() {
         let node = this.poiPath[0];
         this.d = "M " + node.x + " " + node.y;
@@ -28,7 +36,6 @@ class Region extends Canvas_Primitive {
                 this.d += " L " + node.x + " " + node.y;
             }
         }
-        console.log(this.d);
         this.svg.setAttribute('d', this.d);
         this.updateCenter();
     }
@@ -39,7 +46,6 @@ class Region extends Canvas_Primitive {
         this.svg.setAttribute('fill', this.color);
         this.svg.setAttribute('opacity', "0.25");
         this.g.insertBefore(this.svg, selectionDummy);
-        this.g.appendChild(this.expandedSVG);
         this.g.appendChild(this.idText);
     }
 

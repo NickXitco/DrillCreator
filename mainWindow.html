@@ -185,7 +185,7 @@
 
         onkeydown = function (e) {
             //Check this on windows, we may want to also allow "delete" to work, or change it based on system.
-            if (selection.primitives.length !== 0 && e.key==="Backspace" && !propertiesFocus()) {
+            if (selection.primitives.length !== 0 && (e.key==="Backspace" || e.key==="Delete") && !propertiesFocus()) {
                 deleteSelection(selection);
             }
         };

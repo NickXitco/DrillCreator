@@ -56,95 +56,6 @@ class Util {
         return {x, y};
     }
 
-    static getShortestCycle(source, dest, pointsOfInterest, penalties) {
-        let Q = new Set();
-
-        let dist = [];
-        let prev = [];
-        let ids = [];
-
-        for (const point of pointsOfInterest) {
-            dist[point.id] = Infinity;
-            prev[point.id] = null;
-            ids[point.id] = point;
-            Q.add(point);
-        }
-
-        dist[source.id] = 0;
-
-        let found = false;
-
-        function getMinQ() {
-            let minDistNode = Q.keys().next().value;
-            let minDist = dist[minDistNode.id];
-            for (const node of Q) {
-                if (dist[node.id] < minDist) {
-                    minDist = dist[node.id];
-                    minDistNode = node;
-                }
-            }
-            Q.delete(minDistNode);
-            return minDistNode;
-        }
-
-        while (Q.size !== 0 && !found) {
-            let u = getMinQ();
-            for (const v of u.neighbors) {
-                if (Q.has(v)) {
-                    if (!(v === dest && u === source)) {
-                        let tentativeDistance = dist[u.id] + 1;
-                        for (const penalty of penalties) {
-                            if (penalty.u === u && penalty.v === v) {
-                                tentativeDistance += penalty.value;
-                            }
-                            if (penalty.value > 5000) {
-                                return null;
-                            }
-                        }
-                        if (tentativeDistance < dist[v.id]) {
-                            dist[v.id] = tentativeDistance;
-                            prev[v.id] = u.id;
-                        }
-                        if (v === dest) {
-                            found = true;
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-
-        if (!found) {
-            return null;
-        }
-
-        let path = [];
-        let crawl = dest.id;
-        while (prev[crawl] !== null && prev[crawl] !== undefined) {
-            path.push(ids[crawl]);
-            crawl = prev[crawl];
-        }
-
-        path.push(source);
-        if (!this.polyContain(path, pointsOfInterest)) {
-            if (path.length >= 3) {
-                return path;
-            }
-        } else {
-            let penalty = 1000;
-            if (penalties.length > 0) {
-                penalty = 6000;
-            }
-            let newPenalties = [];
-            let crawl = dest.id;
-            while (prev[crawl] !== null && prev[crawl] !== undefined) {
-                newPenalties.push({v: ids[crawl], u: ids[prev[crawl]], value: penalty});
-                crawl = prev[crawl];
-            }
-            return this.getShortestCycle(source, dest, pointsOfInterest, newPenalties);
-        }
-    }
-
     static polyContain(path, pointsOfInterest) {
         let corners = path.length;
         let oddNodes = false;
@@ -170,26 +81,6 @@ class Util {
             }
         }
         return oddNodes;
-    }
-
-    static newRegion(path, regions) {
-        let found = false;
-        for (const region of regions) {
-            if (region.path.length === path.length) {
-                if (JSON.stringify(this.sortPath(region.path)) === JSON.stringify(this.sortPath(path))) {
-                    found = true;
-                }
-            }
-        }
-        return !found;
-    }
-
-    static sortPath(path) {
-        let sorted_path = path.slice();
-        sorted_path.sort(function (a, b) {
-            return a.id - b.id;
-        });
-        return sorted_path;
     }
 
     static shiftSnap(line, lines) {

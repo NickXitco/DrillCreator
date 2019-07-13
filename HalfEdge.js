@@ -1,5 +1,5 @@
 class HalfEdge {
-    vertex; //The Vertex which this half-edge emanates from
+    origin; //The Vertex which this half-edge emanates from
 
     twin; // The half-edge pair to this half-edge
 
@@ -11,7 +11,7 @@ class HalfEdge {
     angle;
 
     constructor(vertex, twin, face, next, prev) {
-        this.vertex = vertex;
+        this.origin = vertex;
         this.twin = twin;
         this.face = face;
         this.next = next;
@@ -19,12 +19,12 @@ class HalfEdge {
     }
 
     destination(){
-        return this.twin.vertex;
+        return this.twin.origin;
     }
 
     setAngle(){
-        const dx = this.destination().x - this.vertex.x;
-        const dy = this.destination().y - this.vertex.y;
+        const dx = this.destination().x - this.origin.x;
+        const dy = this.destination().y - this.origin.y;
 
         const l = Math.sqrt(dx * dx + dy * dy);
         if (dy > 0) {
@@ -39,18 +39,30 @@ class HalfEdge {
 
     }
 
-    isFree() {
-        return (this.face == null || this.face.global);
+    degenerate() {
+        return this.next === this.twin || this.prev === this.twin;
     }
+
+    loop() {
+        let loop = [this];
+        let node = this.next;
+        while (node !== this) {
+            loop.push(node);
+            node = node.next;
+        }
+        return loop;
+    }
+
 
 
     /***
      *
      * @param {Vertex} from
      * @param {Vertex} to
-     * @returns HalfEdge
+     * @param {[HalfEdge]} hedges
+     * @returns {toFrom: HalfEdge, fromTo: HalfEdge} HalfEdge
      */
-    static addEdge(from, to){
+    static addEdge(from, to, hedges){
         if (from === to) {
             //Loop edge
             return null;
@@ -102,13 +114,59 @@ class HalfEdge {
             toOut.prev = fromTo;
         }
 
+        hedges.push(fromTo);
+        hedges.push(toFrom);
+
+        let cycles = [];
+
+        let globalCycle = new Cycle();
+        globalCycle.globalCycle = true;
+
         if (fromIsolated && toIsolated) {
-            //Disconnected, add dummy edge
-        } else if (!fromIsolated && !toIsolated) {
-           //Fully connected, check for new face
+            //TODO Disconnected, add dummy edge (we may not need to do this. in fact, I'm almost sure we don't.)
+        } else {
+            let hedges_to_check = [...hedges];
+            while (hedges_to_check.length > 0) {
+                let faceHedge = hedges_to_check.pop();
+                let cycle = new Cycle(faceHedge.loop());
+                hedges_to_check = hedges_to_check.filter(hedge => !cycle.hedges.includes(hedge));
+                cycles.push(cycle);
+            }
         }
 
-        return fromTo;
+        let outsideCycles = cycles.filter(cycle => cycle.insideBoundary);
+        let insideCycles = cycles.filter(cycle => !cycle.insideBoundary);
+
+        for (const outsideCycle of outsideCycles) {
+            let firstCycleHit;
+            let firstCycleHitX = -1;
+            for (const cycle of cycles) {
+                if (cycle !== outsideCycle && cycle.leftmostVertex.x < outsideCycle.leftmostVertex.x) {
+                    let x = cycle.rightmostIntersection(outsideCycle.leftmostVertex.y);
+                    if (x > firstCycleHitX) {
+                        firstCycleHit = cycle;
+                        firstCycleHitX = x;
+                    }
+                }
+            }
+            if (firstCycleHit === undefined) {
+                outsideCycle.globalCycle = true;
+                globalCycle.neighbors.push(outsideCycle);
+                outsideCycle.neighbors.push(globalCycle);
+            } else {
+                outsideCycle.neighbors.push(firstCycleHit);
+                firstCycleHit.neighbors.push(outsideCycle);
+            }
+        }
+
+        console.table(cycles);
+
+        for (const cycle of insideCycles) {
+            let innerComponents = [];
+            //Run DFS on cycle's neighbors, add all items to innerComponents
+            let face = Face.addFace(cycle.leftmostVertex.origin, innerComponents);
+        }
+        return {fromTo, toFrom};
     }
 
 }

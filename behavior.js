@@ -35,13 +35,11 @@ panZoomCanvas.center();
 
 
 //TEST DRIVER
-console.log("Hello!");
-
 let vertices = [];
-let edges = [];
-let faces = [];
+let hedges = [];
 
 let globalFace = new Face(null, null);
+
 
 let v1 = new Vertex(200, 200);
 let v2 = new Vertex(400, 300);
@@ -52,15 +50,25 @@ vertices.push(v2);
 vertices.push(v3);
 vertices.push(v4);
 
-edges.push(HalfEdge.addEdge(v2, v1));
-edges.push(HalfEdge.addEdge(v2, v3));
-edges.push(HalfEdge.addEdge(v4, v2));
-edges.push(HalfEdge.addEdge(v4, v3));
+HalfEdge.addEdge(v2, v1, hedges);
+HalfEdge.addEdge(v2, v3, hedges);
+HalfEdge.addEdge(v4, v2, hedges);
+HalfEdge.addEdge(v4, v3, hedges);
+
+
 
 console.table(vertices);
-console.table(edges);
-console.table(faces);
+console.table(hedges);
 
+let faces = [];
+
+for (const hedge of hedges) {
+    if (!faces.includes(hedge.face)) {
+        faces.push(hedge.face);
+    }
+}
+
+console.table(faces);
 
 
 

@@ -9,7 +9,6 @@ class Face {
         this.inner_edges = inner_edges;
     }
 
-
     /***
      *
      * @param {HalfEdge} outer_edge

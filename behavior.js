@@ -20,6 +20,7 @@ let gridMultiple = 1;
 
 let lines = [];
 let hedges = [];
+let faces = [];
 
 /*
 let keyframes = [];
@@ -89,9 +90,14 @@ canvasDiv.onmouseup = function(e) {
     if (activeDrawing.drawing != null && e.button === 0 && (currentTool === tools.LINE || currentTool === tools.CURVE)) {
         drawUp(x, y, activeDrawing, lines);
         if (!activeDrawing.drawing.destroyed) {
+            for (const face of faces) {
+                if (!face.global) {
+                    face.region.destroy();
+                }
+            }
             let v1 = Vertex.addVertex(activeDrawing.drawing.anchor.x, activeDrawing.drawing.anchor.y, hedges);
             let v2 = Vertex.addVertex(activeDrawing.drawing.endpoint.x, activeDrawing.drawing.endpoint.y, hedges);
-            HalfEdge.addEdge(v1, v2, hedges);
+            faces = HalfEdge.addEdge(v1, v2, hedges, faces, activeDrawing.drawing);
         }
         activeDrawing.drawing = null;
         activeDrawing.type = null;

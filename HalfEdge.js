@@ -51,22 +51,17 @@ class HalfEdge {
         return loop;
     }
 
-
-
     /***
      *
      * @param {Vertex} from
      * @param {Vertex} to
      * @param {[HalfEdge]} hedges
-     * @returns {{toFrom: HalfEdge, fromTo: HalfEdge}} HalfEdge
+     * @param {[Face]} faces
+     * @param curve
+     * @returns {[Face]} all created faces
      */
-    static addEdge(from, to, hedges){
-        if (from === to) {
-            //Loop edge
-            return undefined;
-        }
-
-        //Check for parallel edges? ie, if the edge already exists?
+    static addEdge(from, to, hedges, faces, curve){
+        //Check for coincidental edges
 
         let fromTo, toFrom;
         fromTo = new HalfEdge(from, null, null, null, null);
@@ -75,9 +70,33 @@ class HalfEdge {
         fromTo.next = toFrom;
         fromTo.prev = toFrom;
 
+        fromTo.line = curve;
+        toFrom.line = curve;
+
         fromTo.setAngle();
         toFrom.setAngle();
 
+        hedges.push(fromTo);
+        hedges.push(toFrom);
+
+        this.linkHedges(from, fromTo, toFrom, to);
+
+        let cycles = [];
+
+        let globalCycle = new Cycle();
+        globalCycle.globalCycle = true;
+
+        this.buildCycles(hedges, cycles);
+
+        let outsideCycles = cycles.filter(cycle => cycle.insideBoundary);
+        let insideCycles = cycles.filter(cycle => !cycle.insideBoundary);
+
+        this.cycleGraph(outsideCycles, cycles, globalCycle);
+
+        return this.calculateFaces(insideCycles, globalCycle);
+    }
+
+    static linkHedges(from, fromTo, toFrom, to) {
         if (from.isolated()) {
             from.addEdge(fromTo);
         } else {
@@ -107,26 +126,9 @@ class HalfEdge {
             fromTo.next = toOut;
             toOut.prev = fromTo;
         }
+    }
 
-        hedges.push(fromTo);
-        hedges.push(toFrom);
-
-        let cycles = [];
-
-        let globalCycle = new Cycle();
-        globalCycle.globalCycle = true;
-
-        let hedges_to_check = [...hedges];
-        while (hedges_to_check.length > 0) {
-            let faceHedge = hedges_to_check.pop();
-            let cycle = new Cycle(faceHedge.loop());
-            hedges_to_check = hedges_to_check.filter(hedge => !cycle.hedges.includes(hedge));
-            cycles.push(cycle);
-        }
-
-        let outsideCycles = cycles.filter(cycle => cycle.insideBoundary);
-        let insideCycles = cycles.filter(cycle => !cycle.insideBoundary);
-
+    static cycleGraph(outsideCycles, cycles, globalCycle) {
         for (const outsideCycle of outsideCycles) {
             let firstCycleHit;
             let firstCycleHitX = -1;
@@ -148,7 +150,20 @@ class HalfEdge {
                 firstCycleHit.neighbors.push(outsideCycle);
             }
         }
+    }
 
+    static buildCycles(hedges, cycles) {
+        let hedges_to_check = [...hedges];
+        while (hedges_to_check.length > 0) {
+            let faceHedge = hedges_to_check.pop();
+            let cycle = new Cycle(faceHedge.loop());
+            hedges_to_check = hedges_to_check.filter(hedge => !cycle.hedges.includes(hedge));
+            cycles.push(cycle);
+        }
+    }
+
+    static calculateFaces(insideCycles, globalCycle) {
+        let returnFaces = [];
         insideCycles.push(globalCycle);
         for (const cycle of insideCycles) {
             let innerComponents = [];
@@ -173,10 +188,10 @@ class HalfEdge {
                 face.global = false;
             }
             face.setFaceRecordsOnEdges();
+            returnFaces.push(face);
         }
-        return {fromTo, toFrom};
+        return returnFaces;
     }
-
 }
 
 

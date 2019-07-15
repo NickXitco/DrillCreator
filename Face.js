@@ -4,9 +4,12 @@ class Face {
 
     global;
 
-    constructor(outer_edge, inner_edges) {
+    region;
+
+    constructor(outer_edge, inner_edges, region) {
         this.outer_edge = outer_edge;
         this.inner_edges = inner_edges;
+        this.region = region;
     }
 
 
@@ -42,11 +45,11 @@ class Face {
      * @return {Face}
      */
     static addFace(outer_edge, inner_edges) {
+        let r;
         if (outer_edge !== null) {
-            console.log(outer_edge);
-            let r = new Region(outer_edge);
+            r = new Region(outer_edge);
             r.render();
         }
-        return new Face(outer_edge, inner_edges);
+        return new Face(outer_edge, inner_edges, r);
     }
 }

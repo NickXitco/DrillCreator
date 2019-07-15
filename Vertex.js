@@ -36,9 +36,23 @@ class Vertex {
      *
      * @param {Number} x
      * @param {Number} y
+     * @param {[HalfEdge]} hedges
      * @return {Vertex} newVertex
      */
-    static addVertex(x, y) {
+    static addVertex(x, y, hedges) {
+        let v = Vertex.vertexSearch(x, y, hedges);
+        if (v !== null) {
+            return v;
+        }
         return new Vertex(x, y, null);
+    }
+
+    static vertexSearch(x, y, hedges) {
+        for (const hedge of hedges) {
+            if (hedge.origin.x === x && hedge.origin.y === y) {
+                return hedge.origin;
+            }
+        }
+        return null;
     }
 }

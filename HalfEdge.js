@@ -8,7 +8,9 @@ class HalfEdge {
     next; // The half-edge that this half-edge points to
     prev; // The half-edge that points to this half-edge (there is only 1!)
 
-    angle;
+    angle; //The number of degrees this hedge is CW from the vector (0, 0) -> (inf, 0)
+
+    line; //The line object this hedge corresponds to.
 
     constructor(vertex, twin, face, next, prev) {
         this.origin = vertex;
@@ -39,10 +41,6 @@ class HalfEdge {
 
     }
 
-    degenerate() {
-        return this.next === this.twin || this.prev === this.twin;
-    }
-
     loop() {
         let loop = [this];
         let node = this.next;
@@ -60,12 +58,12 @@ class HalfEdge {
      * @param {Vertex} from
      * @param {Vertex} to
      * @param {[HalfEdge]} hedges
-     * @returns {toFrom: HalfEdge, fromTo: HalfEdge} HalfEdge
+     * @returns {{toFrom: HalfEdge, fromTo: HalfEdge}} HalfEdge
      */
     static addEdge(from, to, hedges){
         if (from === to) {
             //Loop edge
-            return null;
+            return undefined;
         }
 
         //Check for parallel edges? ie, if the edge already exists?
@@ -80,10 +78,7 @@ class HalfEdge {
         fromTo.setAngle();
         toFrom.setAngle();
 
-        let fromIsolated, toIsolated = false;
-
         if (from.isolated()) {
-            fromIsolated = true;
             from.addEdge(fromTo);
         } else {
             from.addEdge(fromTo);
@@ -99,7 +94,6 @@ class HalfEdge {
         }
 
         if (to.isolated()) {
-            toIsolated = true;
             to.addEdge(toFrom);
         } else {
             to.addEdge(toFrom);
@@ -122,16 +116,12 @@ class HalfEdge {
         let globalCycle = new Cycle();
         globalCycle.globalCycle = true;
 
-        if (fromIsolated && toIsolated) {
-            //TODO Disconnected, add dummy edge (we may not need to do this. in fact, I'm almost sure we don't.)
-        } else {
-            let hedges_to_check = [...hedges];
-            while (hedges_to_check.length > 0) {
-                let faceHedge = hedges_to_check.pop();
-                let cycle = new Cycle(faceHedge.loop());
-                hedges_to_check = hedges_to_check.filter(hedge => !cycle.hedges.includes(hedge));
-                cycles.push(cycle);
-            }
+        let hedges_to_check = [...hedges];
+        while (hedges_to_check.length > 0) {
+            let faceHedge = hedges_to_check.pop();
+            let cycle = new Cycle(faceHedge.loop());
+            hedges_to_check = hedges_to_check.filter(hedge => !cycle.hedges.includes(hedge));
+            cycles.push(cycle);
         }
 
         let outsideCycles = cycles.filter(cycle => cycle.insideBoundary);
@@ -159,12 +149,30 @@ class HalfEdge {
             }
         }
 
-        console.table(cycles);
-
+        insideCycles.push(globalCycle);
         for (const cycle of insideCycles) {
             let innerComponents = [];
             //Run DFS on cycle's neighbors, add all items to innerComponents
-            let face = Face.addFace(cycle.leftmostVertex.origin, innerComponents);
+            let Q = [...cycle.neighbors];
+            while (Q.length > 0) {
+                let c = Q.pop();
+                innerComponents.push(c.hedges[0]);
+                for (const neighbor of c.neighbors) {
+                    if (neighbor !== cycle && !innerComponents.includes(neighbor.hedges[0])) {
+                        Q.push(neighbor);
+                    }
+                }
+            }
+
+            let face;
+            if (cycle === globalCycle) {
+                face = Face.addFace(null, innerComponents);
+                face.global = true;
+            } else {
+                face = Face.addFace(cycle.hedges[0], innerComponents);
+                face.global = false;
+            }
+            face.setFaceRecordsOnEdges();
         }
         return {fromTo, toFrom};
     }

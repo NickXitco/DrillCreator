@@ -19,6 +19,7 @@ let selection = {rect: multiSelectRect, primitives: []};
 let gridMultiple = 1;
 
 let lines = [];
+let hedges = [];
 
 /*
 let keyframes = [];
@@ -30,48 +31,6 @@ key.function(key.value, key.object);
 let panZoomCanvas = svgPanZoom('#svgMain', {panEnabled: false, beforePan: panCheck, controlIconsEnabled: false, minZoom: 1, dblClickZoomEnabled: false, });
 panZoomCanvas.zoom(2);
 panZoomCanvas.center();
-
-
-
-
-//TEST DRIVER
-let vertices = [];
-let hedges = [];
-
-let globalFace = new Face(null, null);
-
-
-let v1 = new Vertex(200, 200);
-let v2 = new Vertex(400, 300);
-let v3 = new Vertex(600, 200);
-let v4 = new Vertex(400, 50);
-vertices.push(v1);
-vertices.push(v2);
-vertices.push(v3);
-vertices.push(v4);
-
-HalfEdge.addEdge(v2, v1, hedges);
-HalfEdge.addEdge(v2, v3, hedges);
-HalfEdge.addEdge(v4, v2, hedges);
-HalfEdge.addEdge(v4, v3, hedges);
-
-
-
-console.table(vertices);
-console.table(hedges);
-
-let faces = [];
-
-for (const hedge of hedges) {
-    if (!faces.includes(hedge.face)) {
-        faces.push(hedge.face);
-    }
-}
-
-console.table(faces);
-
-
-
 
 /**
  * Restricts panning (and consequently the zoom region) to the size of the full container.
@@ -129,6 +88,11 @@ canvasDiv.onmouseup = function(e) {
     y = parseInt(y);
     if (activeDrawing.drawing != null && e.button === 0 && (currentTool === tools.LINE || currentTool === tools.CURVE)) {
         drawUp(x, y, activeDrawing, lines);
+        if (!activeDrawing.drawing.destroyed) {
+            let v1 = Vertex.addVertex(activeDrawing.drawing.anchor.x, activeDrawing.drawing.anchor.y, hedges);
+            let v2 = Vertex.addVertex(activeDrawing.drawing.endpoint.x, activeDrawing.drawing.endpoint.y, hedges);
+            HalfEdge.addEdge(v1, v2, hedges);
+        }
         activeDrawing.drawing = null;
         activeDrawing.type = null;
     } else if (e.button === 0 && currentTool === tools.SELECT) {

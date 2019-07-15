@@ -11,6 +11,8 @@ class Canvas_Primitive {
     expandedSVG = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     visibility = true;
 
+    destroyed = false;
+
     g = document.querySelector('#svgG');
 
     constructor(x, y, color) {
@@ -49,6 +51,7 @@ class Canvas_Primitive {
 
     destroy() {
         this.g.removeChild(this.svg);
+        this.destroyed = true;
     }
 
     setID(id) {

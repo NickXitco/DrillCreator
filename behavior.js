@@ -92,7 +92,7 @@ canvasDiv.onmouseup = function(e) {
         if (!activeDrawing.drawing.destroyed) {
             for (const face of faces) {
                 if (!face.global) {
-                    face.region.destroy();
+                    face.destroy();
                 }
             }
             let v1 = Vertex.addVertex(activeDrawing.drawing.anchor.x, activeDrawing.drawing.anchor.y, hedges);

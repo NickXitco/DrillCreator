@@ -2,7 +2,9 @@ class Vertex {
     x;
     y;
 
-    edges = [];
+    edges = []; //Hedges originating from this vertex
+
+    points = []; //Point objects linked to this vertex
 
     constructor(x, y) {
         this.x = x;

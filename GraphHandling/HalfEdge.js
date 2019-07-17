@@ -25,20 +25,8 @@ class HalfEdge {
     }
 
     setAngle(){
-        const dx = this.destination().x - this.origin.x;
-        const dy = this.destination().y - this.origin.y;
-
-        const l = Math.sqrt(dx * dx + dy * dy);
-        if (dy > 0) {
-            this.angle = toDeg(Math.acos(dx / l));
-        } else {
-            this.angle = toDeg(Math.PI * 2 - Math.acos(dx / l));
-        }
-
-        function toDeg(rads) {
-            return 180 * rads / Math.PI;
-        }
-
+        this.angle = HalfEdge.getAngle(this.origin.x, this.origin.y,
+                                       this.destination().x, this.destination().y);
     }
 
     loop() {
@@ -51,18 +39,45 @@ class HalfEdge {
         return loop;
     }
 
+    static getAngle(x1, y1, x2, y2) {
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+
+        const l = Math.sqrt(dx * dx + dy * dy);
+        if (dy > 0) {
+            return toDeg(Math.acos(dx / l));
+        } else {
+            return toDeg(Math.PI * 2 - Math.acos(dx / l));
+        }
+
+        function toDeg(rads) {
+            return 180 * rads / Math.PI;
+        }
+    }
+
+    static removeEdge(hedge) {
+        if (!(hedge.twin === hedge.next && hedge.twin === hedge.prev)) {
+            hedge.next.prev = hedge.twin.prev;
+            hedge.prev.next = hedge.twin.next;
+
+            hedge.twin.next.prev = hedge.prev;
+            hedge.twin.prev.next = hedge.next;
+        }
+    }
+
+
     /***
      *
      * @param {Vertex} from
      * @param {Vertex} to
      * @param {[HalfEdge]} hedges
      * @param {[Face]} faces
-     * @param curve
+     * @param {Line} line
      * @returns {[Face]} all created faces
      */
-    static addEdge(from, to, hedges, faces, curve){
-        //Check for coincidental edges
+    static addEdge(from, to, line, hedges, faces){
 
+        //Check for coincidental edges
         let fromTo, toFrom;
         fromTo = new HalfEdge(from, null, null, null, null);
         toFrom = new HalfEdge(to, fromTo, null, fromTo, fromTo);
@@ -70,8 +85,11 @@ class HalfEdge {
         fromTo.next = toFrom;
         fromTo.prev = toFrom;
 
-        fromTo.line = curve;
-        toFrom.line = curve;
+        fromTo.line = line;
+        toFrom.line = line;
+
+        line.anchorHedge = fromTo;
+        line.endpointHedge = toFrom;
 
         fromTo.setAngle();
         toFrom.setAngle();
@@ -133,8 +151,9 @@ class HalfEdge {
             let firstCycleHit;
             let firstCycleHitX = -1;
             for (const cycle of cycles) {
-                if (cycle !== outsideCycle && cycle.leftmostVertex.x < outsideCycle.leftmostVertex.x) {
-                    let x = cycle.rightmostIntersection(outsideCycle.leftmostVertex.y);
+                const leftmost = outsideCycle.leftmostVertex;
+                if (cycle !== outsideCycle && cycle.leftmostVertex.x < leftmost.x) {
+                    let x = cycle.rightmostIntersection(leftmost.x, leftmost.y);
                     if (x > firstCycleHitX) {
                         firstCycleHit = cycle;
                         firstCycleHitX = x;

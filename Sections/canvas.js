@@ -88,21 +88,11 @@ canvasDiv.onmouseup = function(e) {
     x = parseInt(x);
     y = parseInt(y);
     if (activeDrawing.drawing != null && e.button === 0 && (currentTool === tools.LINE || currentTool === tools.CURVE)) {
-        drawUp(x, y, activeDrawing, lines);
-        if (!activeDrawing.drawing.destroyed) {
-            for (const face of faces) {
-                if (!face.global) {
-                    face.destroy();
-                }
-            }
-            let v1 = Vertex.addVertex(activeDrawing.drawing.anchor.x, activeDrawing.drawing.anchor.y, hedges);
-            let v2 = Vertex.addVertex(activeDrawing.drawing.endpoint.x, activeDrawing.drawing.endpoint.y, hedges);
-            faces = HalfEdge.addEdge(v1, v2, hedges, faces, activeDrawing.drawing);
-        }
+        drawUp(x, y, activeDrawing, lines, hedges, faces);
         activeDrawing.drawing = null;
         activeDrawing.type = null;
     } else if (e.button === 0 && currentTool === tools.SELECT) {
-        selectUp(bools, selection, lines);
+        selectUp(bools, selection, lines, hedges, faces);
     } else if (e.button === 1) {
         panZoomCanvas.disablePan();
     }

@@ -39,7 +39,7 @@ class Face {
         }
     }
 
-    //BEGIN VISUALS SECTION
+    //<editor-fold desc="Visuals">
     hoverOn() {
         $(this).data().self.svg.setAttribute('fill', "#00bbbb");
     }
@@ -66,7 +66,13 @@ class Face {
 
         do {
             if (current.line instanceof Curve) {
-                this.d += "Q " + current.line.controlPoint.x + " " + current.line.controlPoint.y + " " + current.destination().x + " " + current.destination().y;
+                //We have to skip one because of the way curves are handled.
+                let skip = current.next;
+                this.d += "Q " + current.line.controlPoint.x + " " + current.line.controlPoint.y + " " + skip.destination().x + " " + skip.destination().y;
+                if (skip === start) {
+                    break;
+                }
+                current = current.next;
             } else {
                 this.d += "L " + current.destination().x + " " + current.destination().y;
             }
@@ -107,10 +113,8 @@ class Face {
         this.g.removeChild(this.idText);
         this.g.removeChild(this.svg);
     }
-
-    //END VISUALS SECTION
-    //BEGIN DCEL MANIPULATION SECTION
-
+    //</editor-fold>
+    //<editor-fold desc="DCEL">
     setFaceRecordsOnEdges() {
         if (this.outer_edge !== null) {
             let start = this.outer_edge;
@@ -135,7 +139,6 @@ class Face {
         }
     }
 
-
     /***
      *
      * @param {HalfEdge} outer_edge
@@ -145,4 +148,5 @@ class Face {
     static addFace(outer_edge, inner_edges) {
         return new Face(outer_edge, inner_edges);
     }
+    //</editor-fold>
 }

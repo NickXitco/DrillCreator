@@ -1,3 +1,7 @@
+/***
+ * This class is purely used as a helper/in-between class used in the creation of faces.
+ * Cycle objects should not be stored anywhere and are dumped as soon as they're used to create a face.
+ */
 class Cycle {
     hedges = [];
 
@@ -49,13 +53,15 @@ class Cycle {
         this.leftmostVertex = leftmostVertex
     }
 
-    rightmostIntersection(y) {
+    rightmostIntersection(x, y) {
         let rightmostX = -1;
         for (const hedge of this.hedges) {
             if (hedge.origin.y <= y && hedge.destination().y >= y) {
                 let intersectRatio = (y - hedge.origin.y) / (hedge.destination().y - hedge.origin.y);
-                let x = hedge.origin.x + intersectRatio * (hedge.destination().x - hedge.origin.x);
-                rightmostX = x > rightmostX && hedge.angle < 180 ? x : rightmostX;
+                let intersectX = hedge.origin.x + intersectRatio * (hedge.destination().x - hedge.origin.x);
+                if ((intersectX > rightmostX) && (hedge.angle < 180) && (intersectX < x)) {
+                    rightmostX = intersectX;
+                }
             }
         }
         return rightmostX;

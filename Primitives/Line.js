@@ -8,6 +8,9 @@ class Line extends Canvas_Primitive {
     anchor;
     endpoint;
 
+    anchorHedge;
+    endpointHedge;
+
     constructor (x, y, endpointX, endpointY, color) {
         super(x, y, color);
         this.endpointX = endpointX;

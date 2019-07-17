@@ -11,6 +11,8 @@ class Point {
 
     active = false;
 
+    vertex;
+
     g = document.querySelector('#svgG');
 
     constructor(x, y, line) {

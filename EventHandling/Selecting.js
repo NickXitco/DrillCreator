@@ -63,7 +63,7 @@ function selectDown(e, x, y, down, bools, selection) {
     down.y = y;
     if (e.target.id !== "gridRect" && e.target.id !== "svgMain") {
         //User clicked something
-        if (selection.primitives.length > 1 && selection.primitives.includes($(e.target).data().self)) { //TODO refine this condition, right now it's just not even correct.
+        if (selection.primitives.length > 1 && selection.primitives.includes($(e.target).data().self)) {
             bools.movingSelection = true;
         } else {
             deselect(selection);
@@ -125,7 +125,7 @@ function moveMultiSelectRect(x, y, down, selection) {
     }
 }
 
-function selectUp(bools, selection, lines) {
+function selectUp(bools, selection, lines, hedges, faces) {
     if (bools.multiSelecting) {
         multiSelect(selection, bools, lines);
         selection.rect.removeAttribute('x');
@@ -135,4 +135,85 @@ function selectUp(bools, selection, lines) {
     } else if (bools.movingSelection) {
         bools.movingSelection = false;
     }
+
+    let vertices = [];
+
+    for (const hedge of hedges) {
+        if (!vertices.includes(hedge.origin)) {
+            vertices.push(hedge.origin);
+        }
+    }
+
+    for (const face of faces) {
+        if (!face.global) {
+            face.destroy();
+        }
+    }
+    faces.splice(0, faces.length);
+
+    let selectedVertices = [];
+    for (const prim of selection.primitives) {
+        if (prim instanceof Line) {
+            if (prim instanceof Curve) {
+                if (!selectedVertices.includes(prim.controlPoint.vertex)) {
+                    selectedVertices.push(prim.controlPoint.vertex);
+                }
+            }
+            if (!selectedVertices.includes(prim.anchor.vertex)) {
+                selectedVertices.push(prim.anchor.vertex);
+            }
+            if (!selectedVertices.includes(prim.endpoint.vertex)) {
+                selectedVertices.push(prim.endpoint.vertex);
+            }
+        } else if (prim instanceof Point) {
+            if (!selectedVertices.includes(prim.vertex)) {
+                selectedVertices.push(prim.vertex);
+            }
+        }
+    }
+
+    let newVertexMapping= [];
+    for (const v of selectedVertices) {
+        let x = v.x;
+        let y = v.y;
+        let vertex = new Vertex(x, y);
+        for (const p of v.points) {
+            p.vertex = vertex;
+        }
+        newVertexMapping.push({old: v, new: vertex});
+    }
+
+    let incidentHedges = [];
+    for (const v of selectedVertices) {
+        for (const hedge of v.edges) {
+            if (!incidentHedges.includes(hedge)) {
+                incidentHedges.push(hedge);
+            }
+        }
+    }
+    hedges.splice(0, hedges.length, hedges.filter(h => !incidentHedges.includes(h)));
+    for (const hedge of incidentHedges) {
+        HalfEdge.removeEdge(hedge);
+    }
+
+    console.log(newVertexMapping);
+
+    for (const mapping of newVertexMapping) {
+        for (const hedge of mapping.old.edges) {
+            console.log(hedge);
+            let end = newVertexMapping.find(h => h.old === hedge.destination());
+            if (end === undefined) {
+                end = hedge.destination();
+            } else {
+                end = end.new;
+            }
+
+            faces = HalfEdge.addEdge(mapping.new, end, hedge.line, hedges, faces);
+        }
+    }
+    //Get all vertices in selection
+    //Delete all incident edges
+    //Add all new vertices in their new positions
+    //Add all new edges back
+    //Set the faces variable equal to the last returned value.
 }

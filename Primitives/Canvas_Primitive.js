@@ -11,6 +11,8 @@ class Canvas_Primitive {
     expandedSVG = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     visibility = true;
 
+    destroyed = false;
+
     g = document.querySelector('#svgG');
 
     constructor(x, y, color) {
@@ -18,9 +20,16 @@ class Canvas_Primitive {
         this.y = y;
         this.color = color;
         this.svg.addEventListener("click", this.click);
+        this.svg.addEventListener("mouseenter", this.hoverOn);
+        this.svg.addEventListener("mouseleave", this.hoverOff);
+
         $(this.svg).data(this.self);
         $(this.expandedSVG).data(this.self);
     }
+
+    hoverOn(){};
+
+    hoverOff(){};
 
     click(){};
 
@@ -42,7 +51,7 @@ class Canvas_Primitive {
 
     destroy() {
         this.g.removeChild(this.svg);
-        this.g.removeChild(this.expandedSVG);
+        this.destroyed = true;
     }
 
     setID(id) {

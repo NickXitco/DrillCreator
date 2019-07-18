@@ -185,38 +185,37 @@
 
         onkeydown = function (e) {
             //Check this on windows, we may want to also allow "delete" to work, or change it based on system.
-            if (selection.primitives.length !== 0 && e.key==="Backspace" && !propertiesFocus()) {
+            if (selection.primitives.length !== 0 && (e.key==="Backspace" || e.key==="Delete") && !propertiesFocus()) {
                 deleteSelection(selection);
             }
         };
 
         function deleteSelection(selection) {
-            handleRegionDeletion(selection.primitives);
             for (const prim of selection.primitives) {
                 let deletable = prim;
                 if (deletable instanceof Point) {
                     deletable = prim.parentLine;
                 }
-                edges.delete(getEdge(getPOI(deletable.anchor), getPOI(deletable.endpoint)));
-                let p = getPOI(deletable.anchor);
-                if (p.endpoints.size === 1) {
-                    pointsOfInterest.delete(p);
-                } else {
-                    p.removeEndpoint(deletable.anchor);
-                }
-                p = getPOI(deletable.endpoint);
-                if (p.endpoints.size === 1) {
-                    pointsOfInterest.delete(p);
-                } else {
-                    p.removeEndpoint(deletable.endpoint);
-                }
                 deletable.destroy();
-
+                hedges.splice(hedges.indexOf(deletable.anchorHedge), 1);
+                hedges.splice(hedges.indexOf(deletable.endpointHedge), 1);
+                deletable.anchorHedge.origin.edges.splice(deletable.anchorHedge.origin.edges.indexOf(deletable.anchorHedge), 1);
+                deletable.endpointHedge.origin.edges.splice(deletable.endpointHedge.origin.edges.indexOf(deletable.endpointHedge), 1);
+                HalfEdge.removeEdge(deletable.anchorHedge);
                 for (const i in lines) {
                     if (lines[i] === deletable) {
                         delete lines[i];
                     }
                 }
+            }
+            for (const face of faces) {
+                if (!face.global) {
+                    face.destroy();
+                }
+            }
+            faces.splice(0, faces.length);
+            for (const face of Face.assessFaces(hedges)) {
+                faces.push(face);
             }
             selection.primitives = [];
         }
@@ -238,33 +237,33 @@
 
     <script src="node_modules/svg-pan-zoom/dist/svg-pan-zoom.js"></script>
     <script src="node_modules/polylabel/index.js"></script>
-    <script src="helper.js"></script>
-    <script src="Drawing.js"></script>
-    <script src="Selecting.js"></script>
 
-    <script src="KeyframeFunctions.js"></script>
-    <script src="Action.js"></script>
+    <script src="Util.js"></script>
 
-    <script src="POI.js"></script>
-    <script src="Edge.js"></script>
+    <script src="EventHandling/Drawing.js"></script>
+    <script src="EventHandling/Selecting.js"></script>
 
-    <script src="Canvas_Object.js"></script>
-    <script src="Canvas_Primitive.js"></script>
-    <script src="Point.js"></script>
-    <script src="ControlPoint.js"></script>
-    <script src="Endpoint.js"></script>
-    <script src="Region.js"></script>
-    <script src="Line.js"></script>
-    <script src="Curve.js"></script>
-    <script src="Person.js"></script>
-    <script src="Prop.js"></script>
+    <script src="TimelineHandling/KeyframeFunctions.js"></script>
+    <script src="TimelineHandling/Action.js"></script>
 
-    <script src="timeline.js"></script>
-    <script src="toolbox.js"></script>
+    <script src="GraphHandling/HalfEdge.js"></script>
+    <script src="GraphHandling/Vertex.js"></script>
+    <script src="GraphHandling/Face.js"></script>
+    <script src="GraphHandling/Cycle.js"></script>
 
-    <script src="behavior.js"></script>
+    <script src="Objects/Canvas_Object.js"></script>
+    <script src="Objects/Person.js"></script>
+    <script src="Objects/Prop.js"></script>
 
+    <script src="Primitives/Canvas_Primitive.js"></script>
+    <script src="Primitives/Point.js"></script>
+    <script src="Primitives/ControlPoint.js"></script>
+    <script src="Primitives/Endpoint.js"></script>
+    <script src="Primitives/Line.js"></script>
+    <script src="Primitives/Curve.js"></script>
 
-
+    <script src="Sections/timeline.js"></script>
+    <script src="Sections/toolbox.js"></script>
+    <script src="Sections/canvas.js"></script>
 </body>
 </html>

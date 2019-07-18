@@ -57,19 +57,17 @@ function drawUp(x, y, activeDrawing, lines, hedges, faces) {
         d.anchor.vertex = v1;
         d.endpoint.vertex = v2;
 
-        let returnedFaces;
-
         if (d instanceof Curve) {
             let v3 = Vertex.addVertex(d.controlPoint.x, d.controlPoint.y, hedges);
             v3.points.push(d.controlPoint);
             d.controlPoint.vertex = v3;
-            HalfEdge.addEdge(v1, v3, d, hedges, faces);
-            returnedFaces = HalfEdge.addEdge(v3, v2, d, hedges, faces);
+            HalfEdge.addEdge(v1, v3, d, hedges);
+            HalfEdge.addEdge(v3, v2, d, hedges);
         } else {
-            returnedFaces = HalfEdge.addEdge(v1, v2, d, hedges, faces);
+            HalfEdge.addEdge(v1, v2, d, hedges);
         }
 
-        for (const face of returnedFaces) {
+        for (const face of Face.assessFaces(hedges)) {
             faces.push(face);
         }
     }

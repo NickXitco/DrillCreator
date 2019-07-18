@@ -197,11 +197,25 @@
                     deletable = prim.parentLine;
                 }
                 deletable.destroy();
+                hedges.splice(hedges.indexOf(deletable.anchorHedge), 1);
+                hedges.splice(hedges.indexOf(deletable.endpointHedge), 1);
+                deletable.anchorHedge.origin.edges.splice(deletable.anchorHedge.origin.edges.indexOf(deletable.anchorHedge), 1);
+                deletable.endpointHedge.origin.edges.splice(deletable.endpointHedge.origin.edges.indexOf(deletable.endpointHedge), 1);
+                HalfEdge.removeEdge(deletable.anchorHedge);
                 for (const i in lines) {
                     if (lines[i] === deletable) {
                         delete lines[i];
                     }
                 }
+            }
+            for (const face of faces) {
+                if (!face.global) {
+                    face.destroy();
+                }
+            }
+            faces.splice(0, faces.length);
+            for (const face of Face.assessFaces(hedges)) {
+                faces.push(face);
             }
             selection.primitives = [];
         }

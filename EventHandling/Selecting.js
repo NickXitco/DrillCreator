@@ -136,14 +136,6 @@ function selectUp(bools, selection, lines, hedges, faces) {
         bools.movingSelection = false;
     }
 
-    let vertices = [];
-
-    for (const hedge of hedges) {
-        if (!vertices.includes(hedge.origin)) {
-            vertices.push(hedge.origin);
-        }
-    }
-
     for (const face of faces) {
         if (!face.global) {
             face.destroy();
@@ -152,68 +144,134 @@ function selectUp(bools, selection, lines, hedges, faces) {
     faces.splice(0, faces.length);
 
     let selectedVertices = [];
+    let skipped = [];
     for (const prim of selection.primitives) {
         if (prim instanceof Line) {
             if (prim instanceof Curve) {
-                if (!selectedVertices.includes(prim.controlPoint.vertex)) {
-                    selectedVertices.push(prim.controlPoint.vertex);
+                skipped.push(updateVertex(prim.controlPoint.vertex, prim.controlPoint, selectedVertices, hedges));
+            }
+            skipped.push(updateVertex(prim.anchor.vertex, prim.anchor, selectedVertices, hedges));
+            skipped.push(updateVertex(prim.endpoint.vertex, prim.endpoint, selectedVertices, hedges));
+        } else if (prim instanceof Point) {
+            skipped.push(updateVertex(prim.vertex, prim, selectedVertices, hedges));
+        }
+    }
+
+    for (const skip of skipped) {
+        if (skip !== undefined) {
+            if (skip.delete) {
+                let line = skip.point.parentLine;
+                line.destroy();
+                hedges.splice(hedges.indexOf(line.anchorHedge), 1);
+                hedges.splice(hedges.indexOf(line.endpointHedge), 1);
+                line.anchorHedge.origin.edges.splice(line.anchorHedge.origin.edges.indexOf(line.anchorHedge), 1);
+                line.endpointHedge.origin.edges.splice(line.endpointHedge.origin.edges.indexOf(line.endpointHedge), 1);
+                HalfEdge.removeEdge(skip.point.parentLine.anchorHedge);
+            } else {
+                updateVertex(skip.vertex, skip.point, selectedVertices, hedges);
+            }
+        }
+    }
+
+    let vertexToOldEdges = [];
+    for (const vertex of selectedVertices) {
+        let oldEdges = [...vertex.edges];
+        let oldTwins = [];
+        for (const hedge of oldEdges) {
+            oldTwins.push(hedge.twin);
+            let twinVertex = hedge.twin.origin;
+            for (let i = twinVertex.edges.length - 1; i >= 0; i--) {
+                if (twinVertex.edges[i] === hedge.twin) {
+                    twinVertex.edges.splice(i, 1);
                 }
             }
-            if (!selectedVertices.includes(prim.anchor.vertex)) {
-                selectedVertices.push(prim.anchor.vertex);
+        }
+        vertex.edges = [];
+        for (let i = hedges.length - 1; i >= 0; i--) {
+            if (oldEdges.includes(hedges[i]) || oldTwins.includes(hedges[i])) {
+                hedges.splice(i, 1);
             }
-            if (!selectedVertices.includes(prim.endpoint.vertex)) {
-                selectedVertices.push(prim.endpoint.vertex);
-            }
-        } else if (prim instanceof Point) {
-            if (!selectedVertices.includes(prim.vertex)) {
-                selectedVertices.push(prim.vertex);
-            }
+        }
+        vertexToOldEdges.push({v: vertex, e: oldEdges});
+    }
+
+    for (const pair of vertexToOldEdges) {
+        const vertex = pair.v;
+        const oldEdges = pair.e;
+        for (const hedge of oldEdges) {
+            let to = hedge.destination();
+            let from = vertex;
+            HalfEdge.removeEdge(hedge);
+            HalfEdge.addEdge(from, to, hedge.line,hedges);
         }
     }
 
-    let newVertexMapping= [];
-    for (const v of selectedVertices) {
-        let x = v.x;
-        let y = v.y;
-        let vertex = new Vertex(x, y);
-        for (const p of v.points) {
-            p.vertex = vertex;
-        }
-        newVertexMapping.push({old: v, new: vertex});
+    for (const face of Face.assessFaces(hedges)) {
+        faces.push(face);
     }
+}
 
-    let incidentHedges = [];
-    for (const v of selectedVertices) {
-        for (const hedge of v.edges) {
-            if (!incidentHedges.includes(hedge)) {
-                incidentHedges.push(hedge);
+function updateVertex(vertex, point, selectedVertices, hedges) {
+    if (!selectedVertices.includes(vertex)) {
+        let splitPointFlag = false;
+        let splitPoint;
+        for (const p of vertex.points) {
+            if (p.x !== point.x || p.y !== point.y) {
+                splitPointFlag = true;
+                splitPoint = p;
             }
         }
-    }
-    hedges.splice(0, hedges.length, hedges.filter(h => !incidentHedges.includes(h)));
-    for (const hedge of incidentHedges) {
-        HalfEdge.removeEdge(hedge);
-    }
 
-    console.log(newVertexMapping);
+        let vertices = [];
+        for (const hedge of hedges) {
+            if (!vertices.includes(hedge.origin)) {
+                vertices.push(hedge.origin);
+            }
+        }
 
-    for (const mapping of newVertexMapping) {
-        for (const hedge of mapping.old.edges) {
-            console.log(hedge);
-            let end = newVertexMapping.find(h => h.old === hedge.destination());
-            if (end === undefined) {
-                end = hedge.destination();
+        if (splitPointFlag) {
+            vertex.points = vertex.points.filter(p => p !== point);
+            let newVertex = Vertex.addVertex(point.x, point.y, hedges);
+            if (!newVertex.points.includes(point)) {
+                newVertex.points.push(point);
+            }
+            point.vertex = newVertex;
+            for (const hedge of vertex.edges) {
+                if (hedge.line === point.parentLine) {
+                    let from = newVertex;
+                    let to = hedge.destination();
+                    if (from === to) {
+                        vertex.points.push(point);
+                        point.vertex = vertex;
+                        if (point.parentLine.getLength() === 0) {
+                            return {vertex, point, delete: true};
+                        }
+                        return {vertex, point, delete: false};
+                    }
+                    hedges.splice(hedges.indexOf(hedge), 1);
+                    hedges.splice(hedges.indexOf(hedge.twin), 1);
+                    hedge.origin.edges.splice(hedge.origin.edges.indexOf(hedge), 1);
+                    hedge.twin.origin.edges.splice(hedge.twin.origin.edges.indexOf(hedge.twin), 1);
+                    HalfEdge.removeEdge(hedge);
+                    HalfEdge.addEdge(from, to, point.parentLine, hedges);
+                }
+            }
+            updateVertex(newVertex, point, selectedVertices, hedges);
+        } else {
+            let match = Vertex.vertexSearch(point.x, point.y, hedges);
+            if (match == null || match === vertex) {
+                vertex.x = point.x;
+                vertex.y = point.y;
+                selectedVertices.push(vertex);
             } else {
-                end = end.new;
+                for (const hedge of point.vertex.edges) {
+                    hedge.origin = match;
+                    match.edges.push(hedge);
+                }
+                point.vertex = match;
+                match.points.push(point);
+                selectedVertices.push(match);
             }
-
-            faces = HalfEdge.addEdge(mapping.new, end, hedge.line, hedges, faces);
         }
     }
-    //Get all vertices in selection
-    //Delete all incident edges
-    //Add all new vertices in their new positions
-    //Add all new edges back
-    //Set the faces variable equal to the last returned value.
 }

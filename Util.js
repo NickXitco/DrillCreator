@@ -56,33 +56,6 @@ class Util {
         return {x, y};
     }
 
-    static polyContain(path, pointsOfInterest) {
-        let corners = path.length;
-        let oddNodes = false;
-
-        for (const point of pointsOfInterest) {
-            if (!path.includes(point)) {
-                let x = point.x;
-                let y = point.y;
-                let i;
-                let j = corners - 1;
-
-                for (i = 0; i < corners; i++) {
-                    if (path[i].y < y && path[j].y >= y || path[j].y < y && path[i].y >= y) {
-                        if (path[i].x + (y - path[i].y) / (path[j].y - path[i].y) * (path[j].x - path[i].x) < x) {
-                            oddNodes=!oddNodes;
-                        }
-                    }
-                    j = i;
-                }
-                if (oddNodes) {
-                    return oddNodes;
-                }
-            }
-        }
-        return oddNodes;
-    }
-
     static shiftSnap(line, lines) {
         let closestPoint = {x: null, y: null};
         let closestPointDistance = Infinity;

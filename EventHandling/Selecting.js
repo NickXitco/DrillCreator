@@ -162,46 +162,26 @@ function selectUp(bools, selection, lines, hedges, faces) {
             if (skip.delete) {
                 let line = skip.point.parentLine;
                 line.destroy();
-                hedges.splice(hedges.indexOf(line.anchorHedge), 1);
-                hedges.splice(hedges.indexOf(line.endpointHedge), 1);
-                line.anchorHedge.origin.edges.splice(line.anchorHedge.origin.edges.indexOf(line.anchorHedge), 1);
-                line.endpointHedge.origin.edges.splice(line.endpointHedge.origin.edges.indexOf(line.endpointHedge), 1);
-                HalfEdge.removeEdge(skip.point.parentLine.anchorHedge);
+                HalfEdge.removeEdge(skip.point.parentLine.anchorHedge, hedges);
             } else {
                 updateVertex(skip.vertex, skip.point, selectedVertices, hedges);
             }
         }
     }
 
-    let vertexToOldEdges = [];
+    let oldEdgeLists = [];
     for (const vertex of selectedVertices) {
-        let oldEdges = [...vertex.edges];
-        let oldTwins = [];
-        for (const hedge of oldEdges) {
-            oldTwins.push(hedge.twin);
-            let twinVertex = hedge.twin.origin;
-            for (let i = twinVertex.edges.length - 1; i >= 0; i--) {
-                if (twinVertex.edges[i] === hedge.twin) {
-                    twinVertex.edges.splice(i, 1);
-                }
-            }
+        let oldEdges = [];
+        for (let i = vertex.edges.length - 1; i--; i >= 0) {
+            oldEdges.push(HalfEdge.removeEdge(vertex.edges[i], hedges));
         }
-        vertex.edges = [];
-        for (let i = hedges.length - 1; i >= 0; i--) {
-            if (oldEdges.includes(hedges[i]) || oldTwins.includes(hedges[i])) {
-                hedges.splice(i, 1);
-            }
-        }
-        vertexToOldEdges.push({v: vertex, e: oldEdges});
+        oldEdgeLists.push(oldEdges);
     }
 
-    for (const pair of vertexToOldEdges) {
-        const vertex = pair.v;
-        const oldEdges = pair.e;
-        for (const hedge of oldEdges) {
+    for (const list of oldEdgeLists) {
+        for (const hedge of list) {
             let to = hedge.destination();
-            let from = vertex;
-            HalfEdge.removeEdge(hedge);
+            let from = hedge.origin;
             HalfEdge.addEdge(from, to, hedge.line,hedges);
         }
     }
@@ -248,11 +228,7 @@ function updateVertex(vertex, point, selectedVertices, hedges) {
                         }
                         return {vertex, point, delete: false};
                     }
-                    hedges.splice(hedges.indexOf(hedge), 1);
-                    hedges.splice(hedges.indexOf(hedge.twin), 1);
-                    hedge.origin.edges.splice(hedge.origin.edges.indexOf(hedge), 1);
-                    hedge.twin.origin.edges.splice(hedge.twin.origin.edges.indexOf(hedge.twin), 1);
-                    HalfEdge.removeEdge(hedge);
+                    HalfEdge.removeEdge(hedge, hedges);
                     HalfEdge.addEdge(from, to, point.parentLine, hedges);
                 }
             }

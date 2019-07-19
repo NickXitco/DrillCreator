@@ -55,7 +55,12 @@ class HalfEdge {
         }
     }
 
-    static removeEdge(hedge) {
+    static removeEdge(hedge, hedges) {
+        hedges.splice(hedges.indexOf(hedge), 1);
+        hedges.splice(hedges.indexOf(hedge.twin), 1);
+        hedge.origin.edges.splice(hedge.origin.edges.indexOf(hedge), 1);
+        hedge.destination().edges.splice(hedge.destination().edges.indexOf(hedge.twin), 1);
+
         if (!(hedge.twin === hedge.next && hedge.twin === hedge.prev)) {
             hedge.next.prev = hedge.twin.prev;
             hedge.prev.next = hedge.twin.next;
@@ -63,6 +68,7 @@ class HalfEdge {
             hedge.twin.next.prev = hedge.prev;
             hedge.twin.prev.next = hedge.next;
         }
+        return hedge;
     }
 
 
@@ -74,7 +80,6 @@ class HalfEdge {
      * @param {Line} line
      */
     static addEdge(from, to, line, hedges){
-
         //Check for coincidental edges
         let fromTo, toFrom;
         fromTo = new HalfEdge(from, null, null, null, null);

@@ -195,13 +195,9 @@
                 let deletable = prim;
                 if (deletable instanceof Point) {
                     deletable = prim.parentLine;
+                    HalfEdge.removeEdge(deletable.anchorHedge, hedges);
                 }
                 deletable.destroy();
-                hedges.splice(hedges.indexOf(deletable.anchorHedge), 1);
-                hedges.splice(hedges.indexOf(deletable.endpointHedge), 1);
-                deletable.anchorHedge.origin.edges.splice(deletable.anchorHedge.origin.edges.indexOf(deletable.anchorHedge), 1);
-                deletable.endpointHedge.origin.edges.splice(deletable.endpointHedge.origin.edges.indexOf(deletable.endpointHedge), 1);
-                HalfEdge.removeEdge(deletable.anchorHedge);
                 for (const i in lines) {
                     if (lines[i] === deletable) {
                         delete lines[i];

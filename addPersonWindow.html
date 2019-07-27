@@ -2,17 +2,19 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Add Drill Item</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+    <title>Add New Person</title>
 </head>
 <body>
     <div class="container">
         <form>
             <div>
-                <label for=item>Enter Drill Item</label>
-                <input type="text" id="item" autofocus>
+                <p>Create New Person</p>
+                <label for=name>Name</label>
+                <input type="text" id="name" autofocus>
+                <label for=image>Image</label>
+                <input type="file" id="image" accept="image/*">
             </div>
-            <button class="btn waves-effect waves-light" type="submit">add Item</button>
+            <input type="submit" value="Add">
         </form>
     </div>
 
@@ -24,11 +26,27 @@
         form.addEventListener('submit', submitForm);
 
         function submitForm(e) {
-            //By default, this will send to a file, we don't want that.
             e.preventDefault();
-            const item = document.querySelector('#item').value;
-            //Send item content as payload for main to catch
-            ipcRenderer.send('item:add', item);
+            const name = document.querySelector('#name').value;
+            const image = document.querySelector('#image').files[0];
+
+            if (name === undefined || name === "") {
+                //TODO error handling
+                return;
+            }
+
+            if (image) {
+                let img = new Image();
+                img.src = window.URL.createObjectURL(image);
+                img.onload = function () {
+                    const width = img.naturalWidth;
+                    const height = img.naturalHeight;
+                    const picture = {path: image.path, width: width, height: height};
+                    ipcRenderer.send('item:add', {name: name, picture: picture});
+                };
+            } else {
+                ipcRenderer.send('item:add', {name: name, picture: null});
+            }
         }
     </script>
 </body>

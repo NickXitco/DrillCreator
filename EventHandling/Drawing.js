@@ -50,21 +50,31 @@ function drawUp(x, y, activeDrawing, lines, hedges, faces) {
         }
         faces.splice(0, faces.length);
 
-        let v1 = Vertex.addVertex(d.anchor.x, d.anchor.y, hedges);
-        let v2 = Vertex.addVertex(d.endpoint.x, d.endpoint.y, hedges);
-        v1.points.push(d.anchor);
-        v2.points.push(d.endpoint);
-        d.anchor.vertex = v1;
-        d.endpoint.vertex = v2;
-
+        const anchorVertex = Vertex.addVertex(d.anchor.x, d.anchor.y, hedges);
+        const endpointVertex = Vertex.addVertex(d.endpoint.x, d.endpoint.y, hedges);
+        anchorVertex.points.push(d.anchor);
+        endpointVertex.points.push(d.endpoint);
+        d.anchor.vertex = anchorVertex;
+        d.endpoint.vertex = endpointVertex;
         if (d instanceof Curve) {
-            let v3 = Vertex.addVertex(d.controlPoint.x, d.controlPoint.y, hedges);
+            const v3 = Vertex.addVertex(d.controlPoint.x, d.controlPoint.y, hedges);
             v3.points.push(d.controlPoint);
             d.controlPoint.vertex = v3;
-            HalfEdge.addEdge(v1, v3, d, hedges);
-            HalfEdge.addEdge(v3, v2, d, hedges);
+            HalfEdge.addEdge(anchorVertex, v3, d, hedges);
+            HalfEdge.addEdge(v3, endpointVertex, d, hedges);
         } else {
-            HalfEdge.addEdge(v1, v2, d, hedges);
+            HalfEdge.addEdge(anchorVertex, endpointVertex, d, hedges);
+        }
+
+
+        let intersectingLines = [];
+
+        for (const i of Util.getAllIntersections(lines, d)) {
+            intersectingLines.push(i.line);
+        }
+
+        if (intersectingLines.length !== 0) {
+            recursivelySplit(d, intersectingLines, hedges);
         }
 
         for (const face of Face.assessFaces(hedges)) {
@@ -83,6 +93,19 @@ function drawUp(x, y, activeDrawing, lines, hedges, faces) {
         d.endpoint.hide();
     }
     smallGrid.setAttribute('visibility', 'hidden');
+}
+
+
+function recursivelySplit(line, possibleIntersections, hedges) {
+    let i = Util.getFirstIntersection(possibleIntersections, line);
+    if (i !== undefined) {
+        const baseSplit = Line.split(line, i.x, i.y, hedges);
+        Line.split(i.line, i.x, i.y, hedges);
+        const u = baseSplit.u;
+        const v = baseSplit.v;
+        recursivelySplit(u, possibleIntersections, hedges);
+        recursivelySplit(v, possibleIntersections, hedges);
+    }
 }
 
 function coincidental(d, lines) {

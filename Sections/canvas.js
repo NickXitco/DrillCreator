@@ -1,26 +1,20 @@
 const electron = require('electron');
 const {ipcRenderer} = electron;
 
-
-const createNewButton = document.querySelector('#createNew');
-createNewButton.addEventListener('click', openNewItemDialog);
-
-function openNewItemDialog() {
-    ipcRenderer.send('new:open');
-}
-
 let down = {x: null, y: null};
 
 let activeDrawing = {drawing: null, type: null};
 let bools = {movingSelection: false, multiSelecting: false};
 let multiSelectRect = createMultiSelectRect();
-let selection = {rect: multiSelectRect, primitives: []};
+let selection = {rect: multiSelectRect, primitives: [], objects: []};
 
 let gridMultiple = 1;
 
 let lines = [];
 let hedges = [];
 let faces = [];
+
+let objects = [];
 
 /*
 let keyframes = [];
@@ -97,19 +91,9 @@ canvasDiv.onmouseup = function(e) {
         panZoomCanvas.disablePan();
     }
     canvasDiv.style.cursor = "default";
+    setObjFaces();
+    console.table(objects);
 };
-
-/*
-Use this function if for some reason in the future we want to implement edge panning.
-
-document.onmousemove = function(e) {
-    if (!e.path.includes(canvasDiv)) {
-        //Not in Canvas;
-    } else {
-        //In Canvas
-    }
-};
-*/
 
 document.onmouseup = function(e) {
     if (!e.path.includes(canvasDiv)) {
@@ -121,17 +105,20 @@ document.onmouseup = function(e) {
     }
 };
 
-
-ipcRenderer.on('item:add', function(){
-    //New Item
-    const element = document.createElementNS('http://www.w3.org/2000/svg', "circle");
-    element.setAttribute('cx', '1500');
-    element.setAttribute('cy', '1000');
-    element.setAttribute('r', "10");
-    element.setAttribute('stroke', "black");
-    element.setAttribute('fill', "none");
-    g.appendChild(element);
+ipcRenderer.on('item:add', function(e, payload){
+    let p = Person.addPerson(payload.name, payload.picture);
+    p.setFace(Util.getFace(p.x, p.y, hedges));
+    objects.push(p);
 });
+
+/***
+ * Temporary expensive function. Sets the face of all objects in memory.
+ */
+function setObjFaces() {
+    for (const obj of objects) {
+        obj.setFace(Util.getFace(obj.x, obj.y, hedges))
+    }
+}
 
 function createMultiSelectRect() {
     let multiSelectRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');

@@ -39,6 +39,31 @@ class HalfEdge {
         return loop;
     }
 
+
+    /**
+     * Finds the y coordinate of the point where the hedge intersects the given x (or null if no such point exists)
+     * @param x The x value to check
+     * @return {null|number}
+     */
+    yIntersect(x) {
+        let x1 = this.origin.x;
+        let x2 = this.destination().x;
+        if (Math.abs(x1 - x) + Math.abs(x - x2) === Math.abs(x1 - x2)) {
+            let m = HalfEdge.getSlope(this.origin.x, this.origin.y, this.destination().x, this.destination().y);
+            let b = this.origin.y - m * this.origin.x;
+            return m*x+b;
+        }
+        return null;
+    }
+
+    static getSlope(x1, y1, x2, y2) {
+        if (x1 === x2) {
+            return Infinity;
+        }
+        return (y2 - y1) / (x2 - x1);
+    }
+
+
     static getAngle(x1, y1, x2, y2) {
         const dx = x2 - x1;
         const dy = y2 - y1;

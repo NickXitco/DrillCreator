@@ -28,7 +28,7 @@ class Face {
 
             this.idText.setAttribute('text-anchor', "middle");
             this.idText.setAttribute('style', "font: 10px sans-serif; fill: blue");
-            this.idText.innerHTML = "A1b";
+            this.setID("");
 
             this.svg.addEventListener("mouseenter", this.hoverOn);
             this.svg.addEventListener("mouseleave", this.hoverOff);
@@ -58,6 +58,11 @@ class Face {
 
         this.svg.setAttribute('d', this.d);
         this.updateCenter();
+    }
+
+    setID(id) {
+        this.id = id;
+        this.idText.innerHTML = this.id;
     }
 
     walkCycleUpdateD(start) {
@@ -218,7 +223,16 @@ class Face {
             face.setFaceRecordsOnEdges();
             returnFaces.push(face);
         }
+        Face.setFaceIDs(returnFaces);
         return returnFaces;
+    }
+
+    static setFaceIDs(faces) {
+        let i = 0;
+        for (const face of faces) {
+            face.setID(i);
+            i++;
+        }
     }
 
     /***

@@ -39,6 +39,9 @@ function singleSelect(e, selection) {
         hit.show();
         hit.parentLine.highlightOn();
         selection.primitives.push(hit);
+    } else if (hit instanceof Person) {
+        hit.highlightOn();
+        selection.objects.push(hit);
     }
 }
 
@@ -55,6 +58,11 @@ function deselect(selection) {
             prim.highlightOff();
         }
     }
+
+    for (const obj of selection.objects) {
+        obj.highlightOff();
+    }
+    selection.objects = [];
     selection.primitives = [];
 }
 
@@ -63,12 +71,10 @@ function selectDown(e, x, y, down, bools, selection) {
     down.y = y;
     if (e.target.id !== "gridRect" && e.target.id !== "svgMain") {
         //User clicked something
-        if (selection.primitives.length > 1 && selection.primitives.includes($(e.target).data().self)) {
-            bools.movingSelection = true;
-        } else {
+        bools.movingSelection = true;
+        if (!(selection.primitives.length > 1 && selection.primitives.includes($(e.target).data().self) || selection.objects.length > 1 && selection.objects.includes($(e.target).data().self))) {
             deselect(selection);
             singleSelect(e, selection);
-            bools.movingSelection = true;
         }
     } else {
         //User didn't click something, start multi-select
@@ -105,6 +111,11 @@ function selectMove(x, y, down, selection, lines) {
             //TODO figure out multi-snapping
         }
     }
+
+    for (const obj of selection.objects) {
+        obj.shift(x - down.x, y - down.y);
+    }
+
     down.x = x;
     down.y = y;
 }
@@ -136,6 +147,10 @@ function selectUp(bools, selection, lines, hedges, faces) {
         bools.movingSelection = false;
     }
 
+    fixDCEL(faces, selection, hedges);
+}
+
+function fixDCEL(faces, selection, hedges) {
     for (const face of faces) {
         if (!face.global) {
             face.destroy();
@@ -182,7 +197,7 @@ function selectUp(bools, selection, lines, hedges, faces) {
         for (const hedge of list) {
             let to = hedge.destination();
             let from = hedge.origin;
-            HalfEdge.addEdge(from, to, hedge.line,hedges);
+            HalfEdge.addEdge(from, to, hedge.line, hedges);
         }
     }
 

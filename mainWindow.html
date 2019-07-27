@@ -15,14 +15,14 @@
                 <li><input type="radio" name="toolSelect" value="erase" onclick="toolSelect(this.value)" id="eraseCheck"><label for="eraseCheck">Erase</label>     </li>
                 <li><input type="radio" name="toolSelect" value="select" onclick="toolSelect(this.value)" id="selectCheck"><label for="selectCheck">Select</label> </li>
                 <li><input type="radio" name="toolSelect" value="curve" onclick="toolSelect(this.value)" id="curveCheck"><label for="curveCheck">Curve</label>     </li>
+                <li><button type="button" id="createPerson">Person</button></li>
             </ul>
-
         </div>
 
         <div id="canvas" style="grid-area: 1 / 2 / 2 / 3">
             <svg xmlns="http://www.w3.org/2000/svg" width="200%" height="200%" style="display: block" id="svgMain">
                 <g xmlns="http://www.w3.org/2000/svg" id="svgG">
-                    <defs>
+                    <defs id="canvasDefs">
                         <pattern id="smallGrid" width="10" height="10" patternUnits="userSpaceOnUse" visibility="hidden">
                             <path d="M 10 0 L 0 0 0 10" fill="none" stroke="gray" stroke-width="0.5"></path>
                         </pattern>
@@ -130,8 +130,8 @@
         const x2Field = document.getElementById("activeX2");
         const y1Field = document.getElementById("activeY1");
         const y2Field = document.getElementById("activeY2");
-        //const widthField = document.getElementById("activeWidth");
-        //const heightField = document.getElementById("activeHeight");
+        const widthField = document.getElementById("activeWidth");
+        const heightField = document.getElementById("activeHeight");
         const colorField = document.getElementById("activeColor");
 
         let history = [];
@@ -144,7 +144,6 @@
         }
 
         function updatePropertyFields(renderable) {
-            /*
             if (renderable != null && (renderable instanceof Canvas_Primitive)) {
                 labelField.value = renderable.id;
                 x1Field.value = renderable.x;
@@ -160,7 +159,6 @@
                 y2Field.value = "";
                 colorField.value = "#000000";
             }
-            */
         }
 
         function updateMouseFields(x, y) {
@@ -169,8 +167,7 @@
             y1Field.value = y;
         }
 
-        function updateClassProperties() {
-            /*
+        function updateClassProperties(renderable) {
             if (renderable != null && (renderable instanceof Canvas_Primitive)) {
                 renderable.id = labelField.value;
                 renderable.x = x1Field.value;
@@ -180,7 +177,6 @@
                 renderable.setColor(colorField.value);
                 renderable.updateD();
             }
-             */
         }
 
         onkeydown = function (e) {
@@ -195,12 +191,12 @@
                 let deletable = prim;
                 if (deletable instanceof Point) {
                     deletable = prim.parentLine;
-                    HalfEdge.removeEdge(deletable.anchorHedge, hedges);
                 }
+                HalfEdge.removeEdge(deletable.anchorHedge, hedges);
                 deletable.destroy();
                 for (const i in lines) {
                     if (lines[i] === deletable) {
-                        delete lines[i];
+                        lines.splice(i, 1);
                     }
                 }
             }
@@ -228,6 +224,15 @@
 
         function propertiesFocus() {
             return (document.activeElement.classList.contains("properties"));
+        }
+
+
+
+        const createNewButton = document.getElementById('createPerson');
+        createNewButton.addEventListener('click', openNewItemDialog);
+
+        function openNewItemDialog() {
+            ipcRenderer.send('new:open');
         }
     </script>
 

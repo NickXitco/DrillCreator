@@ -77,4 +77,19 @@ class Line extends Canvas_Primitive {
         this.centerX = (this.x + this.endpointX) / 2;
         this.centerY = (this.y + this.endpointY) / 2;
     }
+
+
+    static split(line, x, y, hedges) {
+        let line1 = line;
+        let line2 = new Line(x, y, line.endpoint.x, line.endpoint.y, "#ff0000");
+        line.endpoint.setLocation(x, y);
+        line2.render();
+        line2.anchor.hide();
+        line2.endpoint.hide();
+
+        let v = Vertex.addVertex(x, y, hedges);
+
+
+        return {u: line1, v: line2};
+    }
 }

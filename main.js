@@ -9,7 +9,7 @@ const { app, BrowserWindow, Menu, ipcMain} = require('electron');
 //Keep a global reference of the window object. If we didn't have this,
 //then the window will be closed automatically when the JS Object is garbage collected.
 let mainWindow;
-let addItemWindow;
+let addPersonWindow;
 
 //This method will be called when Electron has finished initialization
 // and is ready to create browser windows.
@@ -42,7 +42,7 @@ function createMainWindow() {
 // Handle creating AddItemWindow
 function createAddItemWindow() {
     //Create the browser window.
-    addItemWindow = new BrowserWindow({
+    addPersonWindow = new BrowserWindow({
         width: 300, //TODO see if you can find a way to get some fraction of the native screen width
         height: 200,
         title: 'Add Drill Item',
@@ -52,7 +52,7 @@ function createAddItemWindow() {
     });
 
     //and then load the mainWindow.html of the app.
-    addItemWindow.loadFile('addItemWindow.html');
+    addPersonWindow.loadFile('addPersonWindow.html');
 
     // Build menu from template
     const mainMenu = Menu.buildFromTemplate(mainMenuTemplate);
@@ -60,18 +60,20 @@ function createAddItemWindow() {
     Menu.setApplicationMenu(mainMenu);
 
     //Garbage collection handling
-    addItemWindow.on('closed', () => {
+    addPersonWindow.on('closed', () => {
         // Deference the window object on close, usually you would store windows
         // in an array if your app supports multi windows, this is the time
         // when you should delete the corresponding element.
-        addItemWindow = null
+        addPersonWindow = null
     })
 }
 
 // Catch item:add
-ipcMain.on('item:add', function(e, item){
-    mainWindow.webContents.send('item:add', item);
-    addItemWindow.close();
+ipcMain.on('item:add', function(e, payload){
+    mainWindow.webContents.send('item:add', payload);
+    if (addPersonWindow !== null) {
+        addPersonWindow.close();
+    }
 });
 
 ipcMain.on('new:open', function(){

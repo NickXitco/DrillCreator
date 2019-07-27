@@ -46,6 +46,7 @@ class Util {
     }
 
     static vizCenter(region) {
+        // noinspection ES6ModulesDependencies
         return polylabel(region);
     }
 
@@ -147,4 +148,116 @@ class Util {
         }
     }
 
+
+    /***
+     * Inefficient O(n) point location algorithm
+     * @param x
+     * @param y
+     * @param hedges
+     * @return {Face}
+     */
+    static getFace(x, y, hedges) {
+        //Find the hedge right above the x,y point
+        let closestYDistance = Infinity;
+        let closestYHedge;
+        for (const hedge of hedges) {
+            if (hedge.angle < 270 && hedge.angle > 90) {
+                let yIntersect = hedge.yIntersect(x);
+                if (yIntersect !== null && yIntersect <= y) {
+                    if ((y - yIntersect) < closestYDistance) {
+                        closestYDistance = y - yIntersect;
+                        closestYHedge = hedge;
+                    }
+                }
+            }
+        }
+
+        if (closestYHedge === undefined) {
+            return null;
+        }
+
+        return closestYHedge.face;
+    }
+
+    static cross(p0x, p0y, p1x, p1y) {
+        return p0x * p1y - p0y * p1x;
+    }
+
+    static getAllIntersections(lines, baseline) {
+        const p0x = baseline.anchor.x;
+        const p0y = baseline.anchor.y;
+        const p1x = baseline.endpoint.x;
+        const p1y = baseline.endpoint.y;
+
+        const rX = (p1x - p0x);
+        const rY = (p1y - p0y);
+
+        let intersections = [];
+
+        for (const line of lines.filter(l => l instanceof Line)) {
+            const p2x = line.anchor.x;
+            const p2y = line.anchor.y;
+            const p3x = line.endpoint.x;
+            const p3y = line.endpoint.y;
+
+            const sX = (p3x - p2x);
+            const sY = (p3y - p2y);
+
+
+            const rsCross = Util.cross(rX, rY, sX, sY);
+            if (rsCross !== 0) {
+                const t = Util.cross(p2x - p0x, p2y - p0y, sX, sY) / rsCross;
+                const u = Util.cross(p2x - p0x, p2y - p0y, rX, rY) / rsCross;
+
+                if (0 <= t && t <= 1 && 0 <= u && u <= 1) {
+                    const intersectX = Math.round(p0x + t * rX);
+                    const intersectY = Math.round(p0y + t * rY);
+
+                    if (Util.distance(p0x, intersectX, p0y, intersectY) > 5
+                        && Util.distance(p1x, intersectX, p1y, intersectY) > 5) {
+                        intersections.push({line: line, x: intersectX, y: intersectY});
+                    }
+                }
+            }
+        }
+        return intersections;
+    }
+
+
+    static getFirstIntersection(lines, baseline) {
+        const p0x = baseline.anchor.x;
+        const p0y = baseline.anchor.y;
+        const p1x = baseline.endpoint.x;
+        const p1y = baseline.endpoint.y;
+
+        const rX = (p1x - p0x);
+        const rY = (p1y - p0y);
+
+        for (const line of lines.filter(l => l instanceof Line)) {
+            const p2x = line.anchor.x;
+            const p2y = line.anchor.y;
+            const p3x = line.endpoint.x;
+            const p3y = line.endpoint.y;
+
+            const sX = (p3x - p2x);
+            const sY = (p3y - p2y);
+
+
+            const rsCross = Util.cross(rX, rY, sX, sY);
+            if (rsCross !== 0) {
+                const t = Util.cross(p2x - p0x, p2y - p0y, sX, sY) / rsCross;
+                const u = Util.cross(p2x - p0x, p2y - p0y, rX, rY) / rsCross;
+
+                if (0 <= t && t <= 1 && 0 <= u && u <= 1) {
+                    const intersectX = Math.round(p0x + t * rX);
+                    const intersectY = Math.round(p0y + t * rY);
+
+                    if (Util.distance(p0x, intersectX, p0y, intersectY) > 5
+                        && Util.distance(p1x, intersectX, p1y, intersectY) > 5) {
+                        return {line: line, x: intersectX, y: intersectY};
+                    }
+                }
+            }
+        }
+    }
 }

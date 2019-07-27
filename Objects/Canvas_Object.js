@@ -1,21 +1,28 @@
 class Canvas_Object {
     x;
     y;
+
     height;
     width;
+
     color;
     name;
     id;
     picture;
-    timestep;
+
+    face;
 
     svg;
+    pattern;
     clickListener;
     visibility = true;
 
-    canvas = document.querySelector('#svgG');
+    self = this;
 
-    constructor(x, y, height, width, color, name, id, picture, timestep) {
+    g = document.querySelector('#svgG');
+    canvasDefs = document.querySelector('#canvasDefs');
+
+    constructor(x, y, height, width, color, name, id, picture) {
         this.x = x;
         this.y = y;
         this.height = height;
@@ -24,9 +31,15 @@ class Canvas_Object {
         this.name = name;
         this.id = id;
         this.picture = picture;
-        this.timestep = timestep;
     }
 
-    render(){
-    };
+    setLocation(x, y){};
+
+    shift(dx, dy){};
+
+    highlightOn(){};
+
+    setFace(face) {
+        this.face = face;
+    }
 }

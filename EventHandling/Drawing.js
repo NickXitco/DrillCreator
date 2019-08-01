@@ -74,7 +74,7 @@ function drawUp(x, y, activeDrawing, lines, hedges, faces) {
         }
 
         if (intersectingLines.length !== 0) {
-            recursivelySplit(d, intersectingLines, hedges);
+            recursivelySplit(d, intersectingLines, hedges, lines);
         }
 
         for (const face of Face.assessFaces(hedges)) {
@@ -96,15 +96,15 @@ function drawUp(x, y, activeDrawing, lines, hedges, faces) {
 }
 
 
-function recursivelySplit(line, possibleIntersections, hedges) {
+function recursivelySplit(line, possibleIntersections, hedges, lines) {
     let i = Util.getFirstIntersection(possibleIntersections, line);
     if (i !== undefined) {
-        const baseSplit = Line.split(line, i.x, i.y, hedges);
-        Line.split(i.line, i.x, i.y, hedges);
-        const u = baseSplit.u;
-        const v = baseSplit.v;
-        recursivelySplit(u, possibleIntersections, hedges);
-        recursivelySplit(v, possibleIntersections, hedges);
+        const baseSplit = Line.split(line, i.x, i.y, hedges, lines);
+        const collateralSplit = Line.split(i.line, i.x, i.y, hedges, lines);
+
+        // Recursion loop
+        recursivelySplit(baseSplit.u, possibleIntersections, hedges, lines);
+        recursivelySplit(baseSplit.v, possibleIntersections, hedges, lines);
     }
 }
 

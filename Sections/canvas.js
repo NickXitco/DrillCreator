@@ -91,8 +91,7 @@ canvasDiv.onmouseup = function(e) {
         panZoomCanvas.disablePan();
     }
     canvasDiv.style.cursor = "default";
-    setObjFaces();
-    console.table(objects);
+    setObjFaces()
 };
 
 document.onmouseup = function(e) {

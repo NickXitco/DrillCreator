@@ -79,17 +79,47 @@ class Line extends Canvas_Primitive {
     }
 
 
-    static split(line, x, y, hedges) {
-        let line1 = line;
+    static split(line, x, y, hedges, lines) {
+        //TODO make sure no lines are of 0 length
+        HalfEdge.removeEdge(line.endpointHedge, hedges);
+        lines.splice(lines.indexOf(line), 1);
+        line.destroy();
+
+        let line1 = new Line(line.anchor.x, line.anchor.y, x, y, "#ff0000");
         let line2 = new Line(x, y, line.endpoint.x, line.endpoint.y, "#ff0000");
-        line.endpoint.setLocation(x, y);
+
+        let endVertex = Vertex.addVertex(line.endpoint.x, line.endpoint.y, hedges);
+        let centerVertex = Vertex.addVertex(x, y, hedges);
+        let beginningVertex = Vertex.addVertex(line.anchor.x, line.anchor.y, hedges);
+
+        endVertex.points.splice(endVertex.points.indexOf(line.endpoint), 1);
+        beginningVertex.points.splice(beginningVertex.points.indexOf(line.anchor), 1);
+
+        line1.render();
+        line1.anchor.hide();
+        line1.endpoint.hide();
         line2.render();
         line2.anchor.hide();
         line2.endpoint.hide();
 
-        let v = Vertex.addVertex(x, y, hedges);
+        line1.setID(Util.emptySlot(lines));
+        lines[line1.id] = line1;
+        line2.setID(Util.emptySlot(lines));
+        lines[line2.id] = line2;
+
+        line1.anchor.vertex = beginningVertex;
+        line1.endpoint.vertex = centerVertex;
+        line2.anchor.vertex = centerVertex;
+        line2.endpoint.vertex = endVertex;
 
 
-        return {u: line1, v: line2};
+        beginningVertex.points.push(line1.anchor);
+        centerVertex.points.push(line1.endpoint);
+        endVertex.points.push(line2.endpoint);
+        centerVertex.points.push(line2.anchor);
+
+        HalfEdge.addEdge(beginningVertex, centerVertex, line1, hedges);
+        HalfEdge.addEdge(centerVertex, endVertex, line2, hedges);
+        return {u: line1, v: line2, center: centerVertex};
     }
 }

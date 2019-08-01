@@ -19,5 +19,14 @@ class Endpoint extends Point {
         } else if (this.endpointClass === epClasses.ENDPOINT) {
             this.parentLine.updateEndpoint(x, y);
         }
+
+        if (this.vertex !== undefined) {
+            this.vertex.x = x;
+            this.vertex.y = y;
+            for (const hedge of this.vertex.edges) {
+                hedge.twin.setAngle();
+                hedge.setAngle();
+            }
+        }
     }
 }

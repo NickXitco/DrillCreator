@@ -57,4 +57,27 @@ class Vertex {
         }
         return null;
     }
+
+    static getVertices(hedges) {
+        let vertices = [];
+        for (const hedge of hedges) {
+            if (!vertices.includes(hedge.origin)) {
+                vertices.push(hedge.origin);
+            }
+        }
+        return vertices;
+    }
+
+    static mergeVertices(v1, v2) {
+        for (const edge of v2.edges) {
+            edge.origin = v1;
+            v1.edges.push(edge);
+        }
+
+        for (const point of v2.points) {
+            point.vertex = v1;
+            v1.points.push(point);
+        }
+        return v1;
+    }
 }

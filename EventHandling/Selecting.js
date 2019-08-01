@@ -136,6 +136,8 @@ function moveMultiSelectRect(x, y, down, selection) {
     }
 }
 
+
+
 function selectUp(bools, selection, lines, hedges, faces) {
     if (bools.multiSelecting) {
         multiSelect(selection, bools, lines);
@@ -147,10 +149,6 @@ function selectUp(bools, selection, lines, hedges, faces) {
         bools.movingSelection = false;
     }
 
-    fixDCEL(faces, selection, hedges);
-}
-
-function fixDCEL(faces, selection, hedges) {
     for (const face of faces) {
         if (!face.global) {
             face.destroy();
@@ -158,6 +156,71 @@ function fixDCEL(faces, selection, hedges) {
     }
     faces.splice(0, faces.length);
 
+    //fixDCEL(faces, selection, hedges);
+
+    handleVertexSplitting(selection, lines, hedges);
+    handleEdgeIntersections(selection, lines, hedges);
+
+    for (const face of Face.assessFaces(hedges)) {
+        faces.push(face);
+    }
+    console.table(Vertex.getVertices(hedges));
+    console.table(lines);
+    console.table(hedges);
+    console.table(faces);
+}
+
+function handleVertexSplitting(selection, lines, hedges) {
+    /*
+    Here's my thesis: we're trying to be too clever.
+
+    Wayyyy too clever with this whole, shifting lines around thing and making sure everything's
+    reattached at the end, or more accurately ***HOPING*** everything is reattached at the end.
+
+    So here's my proposal. If the selection has been moved from its original position, AKA, any vertices points
+    are in different location, then
+        fucking destroy the entire selection
+        and build the entire selection back from scratch
+    it's not gonna be THAT much more expensive, and for now, it's so much more important that we just have
+    something robust, and that is very very robust.
+
+
+    So here's the layout/plan
+
+        1. Detect whether a change has been made.
+        2. If no change, return.
+        3. If yes change, delete everything and rebuild it
+
+
+     There are some intricacies to deal with, and certainly efficiencies to deal with when we start to care
+     about that stuff, but for now, just make something nasty and robust, like, a coal engine or something.
+     */
+
+}
+
+
+
+function handleEdgeIntersections(selection, lines, hedges) {
+    for (const prim of selection.primitives) {
+        let d = prim;
+        if (prim instanceof Point) {
+            d = prim.parentLine;
+        } else if (prim instanceof Curve) {
+            continue; //Can't handle curve intersection right now.
+        }
+        let intersectingLines = [];
+
+        for (const i of Util.getAllIntersections(lines, d)) {
+            intersectingLines.push(i.line);
+        }
+
+        if (intersectingLines.length !== 0) {
+            recursivelySplit(d, intersectingLines, hedges, lines);
+        }
+    }
+}
+
+function fixDCEL(faces, selection, hedges) {
     let selectedVertices = [];
     let skipped = [];
     for (const prim of selection.primitives) {
@@ -187,7 +250,7 @@ function fixDCEL(faces, selection, hedges) {
     let oldEdgeLists = [];
     for (const vertex of selectedVertices) {
         let oldEdges = [];
-        for (let i = vertex.edges.length - 1; i--; i >= 0) {
+        for (let i = vertex.edges.length - 1; i >=0; i--) {
             oldEdges.push(HalfEdge.removeEdge(vertex.edges[i], hedges));
         }
         oldEdgeLists.push(oldEdges);
@@ -199,10 +262,6 @@ function fixDCEL(faces, selection, hedges) {
             let from = hedge.origin;
             HalfEdge.addEdge(from, to, hedge.line, hedges);
         }
-    }
-
-    for (const face of Face.assessFaces(hedges)) {
-        faces.push(face);
     }
 }
 

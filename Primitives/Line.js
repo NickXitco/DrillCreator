@@ -122,4 +122,16 @@ class Line extends Canvas_Primitive {
         HalfEdge.addEdge(centerVertex, endVertex, line2, hedges);
         return {u: line1, v: line2, center: centerVertex};
     }
+
+    static recursivelySplit(line, possibleIntersections, hedges, lines) {
+        let i = Util.getFirstIntersection(possibleIntersections, line);
+        if (i !== undefined) {
+            const baseSplit = Line.split(line, i.x, i.y, hedges, lines);
+            Line.split(i.line, i.x, i.y, hedges, lines); //Collateral Split
+
+            // Recursion loop
+            Line.recursivelySplit(baseSplit.u, possibleIntersections, hedges, lines);
+            Line.recursivelySplit(baseSplit.v, possibleIntersections, hedges, lines);
+        }
+    }
 }

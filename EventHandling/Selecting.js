@@ -156,51 +156,45 @@ function selectUp(bools, selection, lines, hedges, faces) {
     }
     faces.splice(0, faces.length);
 
-    //fixDCEL(faces, selection, hedges);
-
-    handleVertexSplitting(selection, lines, hedges);
-    handleEdgeIntersections(selection, lines, hedges);
+    replaceLines(selection, lines, hedges);
+    handleIntersections(selection, lines, hedges);
 
     for (const face of Face.assessFaces(hedges)) {
         faces.push(face);
     }
-    console.table(Vertex.getVertices(hedges));
-    console.table(lines);
-    console.table(hedges);
-    console.table(faces);
 }
 
-function handleVertexSplitting(selection, lines, hedges) {
-    /*
-    Here's my thesis: we're trying to be too clever.
+function replaceLines(selection, lines, hedges) {
+    for (const prim of selection.primitives) {
+        let line;
+        if (prim instanceof Point) {
+            line = prim.parentLine;
+        } else {
+            line = prim;
+        }
 
-    Wayyyy too clever with this whole, shifting lines around thing and making sure everything's
-    reattached at the end, or more accurately ***HOPING*** everything is reattached at the end.
+        let endVertex = line.endpoint.vertex;
+        let beginningVertex = line.anchor.vertex;
 
-    So here's my proposal. If the selection has been moved from its original position, AKA, any vertices points
-    are in different location, then
-        fucking destroy the entire selection
-        and build the entire selection back from scratch
-    it's not gonna be THAT much more expensive, and for now, it's so much more important that we just have
-    something robust, and that is very very robust.
+        endVertex.points.splice(endVertex.points.indexOf(line.endpoint), 1);
+        beginningVertex.points.splice(beginningVertex.points.indexOf(line.anchor), 1);
 
+        HalfEdge.removeEdge(line.endpointHedge, hedges);
 
-    So here's the layout/plan
+        endVertex = Vertex.addVertex(line.endpoint.x, line.endpoint.y, hedges);
+        beginningVertex = Vertex.addVertex(line.anchor.x, line.anchor.y, hedges);
 
-        1. Detect whether a change has been made.
-        2. If no change, return.
-        3. If yes change, delete everything and rebuild it
+        line.anchor.vertex = beginningVertex;
+        line.endpoint.vertex = endVertex;
 
+        endVertex.points.push(line.endpoint);
+        beginningVertex.points.push(line.anchor);
 
-     There are some intricacies to deal with, and certainly efficiencies to deal with when we start to care
-     about that stuff, but for now, just make something nasty and robust, like, a coal engine or something.
-     */
-
+        HalfEdge.addEdge(beginningVertex, endVertex, line, hedges);
+    }
 }
 
-
-
-function handleEdgeIntersections(selection, lines, hedges) {
+function handleIntersections(selection, lines, hedges) {
     for (const prim of selection.primitives) {
         let d = prim;
         if (prim instanceof Point) {
@@ -215,113 +209,7 @@ function handleEdgeIntersections(selection, lines, hedges) {
         }
 
         if (intersectingLines.length !== 0) {
-            recursivelySplit(d, intersectingLines, hedges, lines);
-        }
-    }
-}
-
-function fixDCEL(faces, selection, hedges) {
-    let selectedVertices = [];
-    let skipped = [];
-    for (const prim of selection.primitives) {
-        if (prim instanceof Line) {
-            if (prim instanceof Curve) {
-                skipped.push(updateVertex(prim.controlPoint.vertex, prim.controlPoint, selectedVertices, hedges));
-            }
-            skipped.push(updateVertex(prim.anchor.vertex, prim.anchor, selectedVertices, hedges));
-            skipped.push(updateVertex(prim.endpoint.vertex, prim.endpoint, selectedVertices, hedges));
-        } else if (prim instanceof Point) {
-            skipped.push(updateVertex(prim.vertex, prim, selectedVertices, hedges));
-        }
-    }
-
-    for (const skip of skipped) {
-        if (skip !== undefined) {
-            if (skip.delete) {
-                let line = skip.point.parentLine;
-                line.destroy();
-                HalfEdge.removeEdge(skip.point.parentLine.anchorHedge, hedges);
-            } else {
-                updateVertex(skip.vertex, skip.point, selectedVertices, hedges);
-            }
-        }
-    }
-
-    let oldEdgeLists = [];
-    for (const vertex of selectedVertices) {
-        let oldEdges = [];
-        for (let i = vertex.edges.length - 1; i >=0; i--) {
-            oldEdges.push(HalfEdge.removeEdge(vertex.edges[i], hedges));
-        }
-        oldEdgeLists.push(oldEdges);
-    }
-
-    for (const list of oldEdgeLists) {
-        for (const hedge of list) {
-            let to = hedge.destination();
-            let from = hedge.origin;
-            HalfEdge.addEdge(from, to, hedge.line, hedges);
-        }
-    }
-}
-
-function updateVertex(vertex, point, selectedVertices, hedges) {
-    if (!selectedVertices.includes(vertex)) {
-        let splitPointFlag = false;
-        let splitPoint;
-        for (const p of vertex.points) {
-            if (p.x !== point.x || p.y !== point.y) {
-                splitPointFlag = true;
-                splitPoint = p;
-            }
-        }
-
-        let vertices = [];
-        for (const hedge of hedges) {
-            if (!vertices.includes(hedge.origin)) {
-                vertices.push(hedge.origin);
-            }
-        }
-
-        if (splitPointFlag) {
-            vertex.points = vertex.points.filter(p => p !== point);
-            let newVertex = Vertex.addVertex(point.x, point.y, hedges);
-            if (!newVertex.points.includes(point)) {
-                newVertex.points.push(point);
-            }
-            point.vertex = newVertex;
-            for (const hedge of vertex.edges) {
-                if (hedge.line === point.parentLine) {
-                    let from = newVertex;
-                    let to = hedge.destination();
-                    if (from === to) {
-                        vertex.points.push(point);
-                        point.vertex = vertex;
-                        if (point.parentLine.getLength() === 0) {
-                            return {vertex, point, delete: true};
-                        }
-                        return {vertex, point, delete: false};
-                    }
-                    HalfEdge.removeEdge(hedge, hedges);
-                    HalfEdge.addEdge(from, to, point.parentLine, hedges);
-                }
-            }
-            updateVertex(newVertex, point, selectedVertices, hedges);
-        } else {
-            let match = Vertex.vertexSearch(point.x, point.y, hedges);
-            if (match == null || match === vertex) {
-                vertex.x = point.x;
-                vertex.y = point.y;
-                selectedVertices.push(vertex);
-            } else {
-                for (const hedge of point.vertex.edges) {
-                    hedge.origin = match;
-                    match.edges.push(hedge);
-                }
-                point.vertex = match;
-                match.points.push(point);
-                selectedVertices.push(match);
-            }
+            Line.recursivelySplit(d, intersectingLines, hedges, lines);
         }
     }
 }

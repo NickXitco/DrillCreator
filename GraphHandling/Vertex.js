@@ -68,16 +68,15 @@ class Vertex {
         return vertices;
     }
 
-    static mergeVertices(v1, v2) {
-        for (const edge of v2.edges) {
-            edge.origin = v1;
-            v1.edges.push(edge);
+    static misaligned(vertex) {
+        let x = vertex.x;
+        let y = vertex.y;
+        for (const point of vertex.points) {
+            if (point.x !== x || point.y !== y) {
+                return true;
+            }
         }
-
-        for (const point of v2.points) {
-            point.vertex = v1;
-            v1.points.push(point);
-        }
-        return v1;
+        return false;
     }
+
 }

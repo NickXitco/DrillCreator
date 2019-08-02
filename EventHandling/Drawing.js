@@ -66,6 +66,9 @@ function drawUp(x, y, activeDrawing, lines, hedges, faces) {
             HalfEdge.addEdge(anchorVertex, endpointVertex, d, hedges);
         }
 
+        console.table(Vertex.getVertices(hedges));
+        console.table(hedges);
+        console.table(faces);
 
         let intersectingLines = [];
 
@@ -74,12 +77,17 @@ function drawUp(x, y, activeDrawing, lines, hedges, faces) {
         }
 
         if (intersectingLines.length !== 0) {
-            recursivelySplit(d, intersectingLines, hedges, lines);
+            Line.recursivelySplit(d, intersectingLines, hedges, lines);
         }
 
         for (const face of Face.assessFaces(hedges)) {
             faces.push(face);
         }
+
+        console.table(Vertex.getVertices(hedges));
+        console.table(hedges);
+        console.table(faces);
+
     }
 
     if (activeDrawing.type === Curve) {
@@ -93,19 +101,6 @@ function drawUp(x, y, activeDrawing, lines, hedges, faces) {
         d.endpoint.hide();
     }
     smallGrid.setAttribute('visibility', 'hidden');
-}
-
-
-function recursivelySplit(line, possibleIntersections, hedges, lines) {
-    let i = Util.getFirstIntersection(possibleIntersections, line);
-    if (i !== undefined) {
-        const baseSplit = Line.split(line, i.x, i.y, hedges, lines);
-        const collateralSplit = Line.split(i.line, i.x, i.y, hedges, lines);
-
-        // Recursion loop
-        recursivelySplit(baseSplit.u, possibleIntersections, hedges, lines);
-        recursivelySplit(baseSplit.v, possibleIntersections, hedges, lines);
-    }
 }
 
 function coincidental(d, lines) {

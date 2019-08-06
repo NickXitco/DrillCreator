@@ -7,8 +7,8 @@ class Canvas_Primitive {
     self = this;
 
     color;
-    svg = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    expandedSVG = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    svg = document.createElementNS(namespace, 'path');
+    expandedSVG = document.createElementNS(namespace, 'path');
     visibility = true;
 
     destroyed = false;

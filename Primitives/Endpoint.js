@@ -4,6 +4,9 @@ const epClasses = {
 };
 
 class Endpoint extends Point {
+    incomingHedge;
+    outgoingHedge;
+
     constructor(x, y, line, epClass) {
         super(x, y, line);
         this.endpointClass = epClass;

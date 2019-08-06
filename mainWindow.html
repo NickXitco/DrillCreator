@@ -192,7 +192,7 @@
                 if (deletable instanceof Point) {
                     deletable = prim.parentLine;
                 }
-                HalfEdge.removeEdge(deletable.anchorHedge, hedges);
+                HalfEdge.removeEdge(deletable.anchor.outgoingHedge, hedges);
                 deletable.destroy();
                 for (const i in lines) {
                     if (lines[i] === deletable) {

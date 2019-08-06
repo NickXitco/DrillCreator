@@ -179,7 +179,7 @@ function replaceLines(selection, lines, hedges) {
         endVertex.points.splice(endVertex.points.indexOf(line.endpoint), 1);
         beginningVertex.points.splice(beginningVertex.points.indexOf(line.anchor), 1);
 
-        HalfEdge.removeEdge(line.endpointHedge, hedges);
+        HalfEdge.removeEdge(line.endpoint.outgoingHedge, hedges);
 
         endVertex = Vertex.addVertex(line.endpoint.x, line.endpoint.y, hedges);
         beginningVertex = Vertex.addVertex(line.anchor.x, line.anchor.y, hedges);
@@ -199,17 +199,25 @@ function handleIntersections(selection, lines, hedges) {
         let d = prim;
         if (prim instanceof Point) {
             d = prim.parentLine;
-        } else if (prim instanceof Curve) {
-            continue; //Can't handle curve intersection right now.
-        }
-        let intersectingLines = [];
-
-        for (const i of Util.getAllIntersections(lines, d)) {
-            intersectingLines.push(i.line);
         }
 
-        if (intersectingLines.length !== 0) {
-            Line.recursivelySplit(d, intersectingLines, hedges, lines);
+        let intersectionPoints = Util.getAllIntersections(lines, d);
+
+        if (intersectionPoints === null) {
+            console.log("Coincidental Lines!");
+            //TODO destroy line, reassess faces
+        }
+
+        intersectionPoints = d.sortPoints(intersectionPoints);
+        console.table(intersectionPoints);
+
+        let splitLine = d;
+        if (intersectionPoints.length !== 0) {
+            for (const intersection of intersectionPoints) {
+                const baseSplit = splitLine.split(intersection.t, hedges, lines);
+                intersection.line.split(intersection.t, hedges, lines);
+                splitLine = baseSplit.v;
+            }
         }
     }
 }

@@ -39,6 +39,10 @@ class HalfEdge {
         return loop;
     }
 
+    isCurve() {
+        return this.line instanceof Curve;
+    }
+
 
     /**
      * Finds the y coordinate of the point where the hedge intersects the given x (or null if no such point exists)
@@ -116,8 +120,24 @@ class HalfEdge {
         fromTo.line = line;
         toFrom.line = line;
 
-        line.anchorHedge = fromTo;
-        line.endpointHedge = toFrom;
+        let fromPoint, toPoint;
+
+        for (const point of from.points) {
+            if (point.parentLine === line) {
+                fromPoint = point;
+            }
+        }
+
+        for (const point of to.points) {
+            if (point.parentLine === line) {
+                toPoint = point;
+            }
+        }
+
+        fromPoint.outgoingHedge = fromTo;
+        fromPoint.incomingHedge = toFrom;
+        toPoint.incomingHedge = fromTo;
+        toPoint.outgoingHedge = toFrom;
 
         fromTo.setAngle();
         toFrom.setAngle();

@@ -183,81 +183,94 @@ class Util {
         return p0x * p1y - p0y * p1x;
     }
 
+    /***
+     *
+     * @param lines
+     * @param baseline
+     * @return {null|Array} null if coincidental lines, array of intersecting curves otherwise
+     */
     static getAllIntersections(lines, baseline) {
-        const p0x = baseline.anchor.x;
-        const p0y = baseline.anchor.y;
-        const p1x = baseline.endpoint.x;
-        const p1y = baseline.endpoint.y;
-
-        const rX = (p1x - p0x);
-        const rY = (p1y - p0y);
-
         let intersections = [];
+        const baselineBBox = baseline.getBoundingBox();
+        for (const line of lines.filter (l => l !== baseline)) {
+            let intersectionsThisLine = 0;
+            if (Line.boundingBoxOverlap(line.getBoundingBox(), baselineBBox)) {
+                let curvePairs = [{a: line, b: baseline, tMin: 0, tMax: 1}];
+                while (curvePairs.length > 0) {
+                    const pair = curvePairs.pop();
 
-        for (const line of lines.filter(l => l instanceof Line)) {
-            const p2x = line.anchor.x;
-            const p2y = line.anchor.y;
-            const p3x = line.endpoint.x;
-            const p3y = line.endpoint.y;
+                    const pairABBox = pair.a.getBoundingBox();
+                    const pairBBBox = pair.b.getBoundingBox();
 
-            const sX = (p3x - p2x);
-            const sY = (p3y - p2y);
+                    if ((pairABBox.xMax - pairABBox.xMin) < 0.5 && (pairABBox.yMax - pairABBox.yMin) < 0.5 &&
+                        (pairBBBox.xMax - pairBBBox.xMin) < 0.5 && (pairBBBox.yMax - pairBBBox.yMin) < 0.5) {
+
+                        const intX = pairABBox.xMax;
+                        const intY = pairABBox.yMax;
+                        const intT = (pair.tMax + pair.tMin) / 2;
+
+                        if (intersectionsThisLine === 0) {
+                            intersections.push({line: line, x: intX, y: intY, t: intT});
+                            intersectionsThisLine++;
+                        } else {
+                            let merged = false;
+                            for (const int of intersections) {
+                                const dist = Util.distance(int.x, intX, int.y, intY);
+                                if (dist < 5) {
+                                    int.x = (int.x + intX) / 2;
+                                    int.y = (int.y + intY) / 2;
+                                    int.t = (int.t + intT) / 2;
+                                    merged = true;
+                                    break;
+                                }
+                            }
+                            if (!merged) {
+                                intersections.push({line: line, x: intX, y: intY, t: intT});
+                                intersectionsThisLine++;
+                            }
+                        }
+
+                        if (intersectionsThisLine > 2) {
+                            return null;
+                        }
+                        continue;
+                    }
+
+                    const aSplit = pair.a.virtualSplit(0.5);
+                    const bSplit = pair.b.virtualSplit(0.5);
 
 
-            const rsCross = Util.cross(rX, rY, sX, sY);
-            if (rsCross !== 0) {
-                const t = Util.cross(p2x - p0x, p2y - p0y, sX, sY) / rsCross;
-                const u = Util.cross(p2x - p0x, p2y - p0y, rX, rY) / rsCross;
+                    if (Line.boundingBoxOverlap(aSplit.a.getBoundingBox(), bSplit.a.getBoundingBox())) {
+                        curvePairs.push({a: aSplit.a, b: bSplit.a, tMin: pair.tMin, tMax: (pair.tMin + pair.tMax) / 2});
+                    }
 
-                if (0 <= t && t <= 1 && 0 <= u && u <= 1) {
-                    const intersectX = Math.round(p0x + t * rX);
-                    const intersectY = Math.round(p0y + t * rY);
+                    if (Line.boundingBoxOverlap(aSplit.a.getBoundingBox(), bSplit.b.getBoundingBox())) {
+                        curvePairs.push({a: aSplit.a, b: bSplit.b, tMin: pair.tMin, tMax: (pair.tMin + pair.tMax) / 2});
+                    }
 
-                    if (Util.distance(p0x, intersectX, p0y, intersectY) > 5
-                        && Util.distance(p1x, intersectX, p1y, intersectY) > 5) {
-                        intersections.push({line: line, x: intersectX, y: intersectY});
+                    if (Line.boundingBoxOverlap(aSplit.b.getBoundingBox(), bSplit.a.getBoundingBox())) {
+                        curvePairs.push({a: aSplit.b, b: bSplit.a, tMin: (pair.tMin + pair.tMax) / 2, tMax: pair.tMax});
+                    }
+
+                    if (Line.boundingBoxOverlap(aSplit.b.getBoundingBox(), bSplit.b.getBoundingBox())) {
+                        curvePairs.push({a: aSplit.b, b: bSplit.b, tMin: (pair.tMin + pair.tMax) / 2, tMax: pair.tMax});
                     }
                 }
             }
+        }
+        for (const int of intersections) {
+            int.x = Math.round(int.x);
+            // noinspection JSSuspiciousNameCombination
+            int.y = Math.round(int.y);
         }
         return intersections;
     }
 
+    static linearBezierFromT(p0, p1, t) {
+        return (1 - t) * p0 + t * p1;
+    }
 
-    static getFirstIntersection(lines, baseline) {
-        const p0x = baseline.anchor.x;
-        const p0y = baseline.anchor.y;
-        const p1x = baseline.endpoint.x;
-        const p1y = baseline.endpoint.y;
-
-        const rX = (p1x - p0x);
-        const rY = (p1y - p0y);
-
-        for (const line of lines.filter(l => l instanceof Line)) {
-            const p2x = line.anchor.x;
-            const p2y = line.anchor.y;
-            const p3x = line.endpoint.x;
-            const p3y = line.endpoint.y;
-
-            const sX = (p3x - p2x);
-            const sY = (p3y - p2y);
-
-
-            const rsCross = Util.cross(rX, rY, sX, sY);
-            if (rsCross !== 0) {
-                const t = Util.cross(p2x - p0x, p2y - p0y, sX, sY) / rsCross;
-                const u = Util.cross(p2x - p0x, p2y - p0y, rX, rY) / rsCross;
-
-                if (0 <= t && t <= 1 && 0 <= u && u <= 1) {
-                    const intersectX = Math.round(p0x + t * rX);
-                    const intersectY = Math.round(p0y + t * rY);
-
-                    if (Util.distance(p0x, intersectX, p0y, intersectY) > 5
-                        && Util.distance(p1x, intersectX, p1y, intersectY) > 5) {
-                        return {line: line, x: intersectX, y: intersectY};
-                    }
-                }
-            }
-        }
+    static quadraticBezierFromT(p0, p1, p2, t) {
+        return (1 - t) * (1 - t) * p0 + 2 * t * (1 - t) * p1 + t * t * p2;
     }
 }

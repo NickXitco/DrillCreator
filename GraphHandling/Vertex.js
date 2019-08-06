@@ -46,7 +46,7 @@ class Vertex {
         if (v !== null) {
             return v;
         }
-        return new Vertex(x, y, null);
+        return new Vertex(x, y);
     }
 
     static vertexSearch(x, y, hedges) {

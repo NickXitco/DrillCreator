@@ -36,7 +36,7 @@ function drawUp(x, y, activeDrawing, lines, hedges, faces) {
         d.endpoint.setLocation(snappedXY.x, snappedXY.y);
     }
 
-    if (d.getLength() < 5 || (coincidental(d, lines) && !(d instanceof Curve))) {
+    if (d.getLength() < 5) {
         d.destroy(); //Destroy lines that are too short
     } else {
         let id = Util.emptySlot(lines);
@@ -57,7 +57,7 @@ function drawUp(x, y, activeDrawing, lines, hedges, faces) {
         d.anchor.vertex = anchorVertex;
         d.endpoint.vertex = endpointVertex;
         if (d instanceof Curve) {
-            const v3 = Vertex.addVertex(d.controlPoint.x, d.controlPoint.y, hedges);
+            const v3 = new Vertex(d.controlPoint.x, d.controlPoint.y);
             v3.points.push(d.controlPoint);
             d.controlPoint.vertex = v3;
             HalfEdge.addEdge(anchorVertex, v3, d, hedges);
@@ -66,28 +66,28 @@ function drawUp(x, y, activeDrawing, lines, hedges, faces) {
             HalfEdge.addEdge(anchorVertex, endpointVertex, d, hedges);
         }
 
-        console.table(Vertex.getVertices(hedges));
-        console.table(hedges);
-        console.table(faces);
+        let intersectionPoints = Util.getAllIntersections(lines, d);
 
-        let intersectingLines = [];
-
-        for (const i of Util.getAllIntersections(lines, d)) {
-            intersectingLines.push(i.line);
+        if (intersectionPoints === null) {
+            console.log("Coincidental Lines!");
+            //TODO destroy line, reassess faces
         }
 
-        if (intersectingLines.length !== 0) {
-            Line.recursivelySplit(d, intersectingLines, hedges, lines);
+        intersectionPoints = d.sortPoints(intersectionPoints);
+        console.table(intersectionPoints);
+
+        let splitLine = d;
+        if (intersectionPoints.length !== 0) {
+            for (const intersection of intersectionPoints) {
+                const baseSplit = splitLine.split(splitLine, intersection.x, intersection.y, hedges, lines);
+                intersection.line.split(intersection.line, intersection.x, intersection.y, hedges, lines);
+                splitLine = baseSplit.v;
+            }
         }
 
         for (const face of Face.assessFaces(hedges)) {
             faces.push(face);
         }
-
-        console.table(Vertex.getVertices(hedges));
-        console.table(hedges);
-        console.table(faces);
-
     }
 
     if (activeDrawing.type === Curve) {
@@ -101,25 +101,4 @@ function drawUp(x, y, activeDrawing, lines, hedges, faces) {
         d.endpoint.hide();
     }
     smallGrid.setAttribute('visibility', 'hidden');
-}
-
-function coincidental(d, lines) {
-    const angle = HalfEdge.getAngle(d.anchor.x, d.anchor.y, d.endpoint.x, d.endpoint.y);
-
-    for (const line of lines) {
-        if (line.anchorHedge.angle === angle || line.endpointHedge.angle === angle) {
-            const distAB = line.getLength();
-            let distAC = Util.distance(line.anchor.x, d.anchor.x, line.anchor.y, d.anchor.y);
-            let distBC = Util.distance(line.endpoint.x, d.anchor.x, line.endpoint.y, d.anchor.y);
-            if (distAC + distBC === distAB && (distBC > 0) && (distAC > 0)) {
-                return true;
-            }
-            distAC = Util.distance(line.anchor.x, d.endpoint.x, line.anchor.y, d.endpoint.y);
-            distBC = Util.distance(line.endpoint.x, d.endpoint.x, line.endpoint.y, d.endpoint.y);
-            if (distAC + distBC === distAB && (distBC > 0) && (distAC > 0)) {
-                return true;
-            }
-        }
-    }
-    return false;
 }

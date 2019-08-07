@@ -51,14 +51,14 @@ class Curve extends Line {
     }
 
     virtualSplit(t) {
-        const x = Math.round(Util.quadraticBezierFromT(this.anchor.x, this.controlPoint.x, this.endpoint.x, t));
-        const y = Math.round(Util.quadraticBezierFromT(this.anchor.y, this.controlPoint.y, this.endpoint.y, t));
+        const x = Util.quadraticBezierFromT(this.anchor.x, this.controlPoint.x, this.endpoint.x, t);
+        const y = Util.quadraticBezierFromT(this.anchor.y, this.controlPoint.y, this.endpoint.y, t);
 
-        const cp1x = Math.round(Util.linearBezierFromT(this.anchor.x, this.controlPoint.x, t));
-        const cp1y = Math.round(Util.linearBezierFromT(this.anchor.y, this.controlPoint.y, t));
+        const cp1x = Util.linearBezierFromT(this.anchor.x, this.controlPoint.x, t);
+        const cp1y = Util.linearBezierFromT(this.anchor.y, this.controlPoint.y, t);
 
-        const cp2x = Math.round(Util.linearBezierFromT(this.controlPoint.x, this.endpoint.x, t));
-        const cp2y = Math.round(Util.linearBezierFromT(this.controlPoint.y, this.endpoint.y, t));
+        const cp2x = Util.linearBezierFromT(this.controlPoint.x, this.endpoint.x, t);
+        const cp2y = Util.linearBezierFromT(this.controlPoint.y, this.endpoint.y, t);
 
         let curve1 = new Curve(this.anchor.x, this.anchor.y, x, y, "");
         curve1.highlightOff();
@@ -74,11 +74,6 @@ class Curve extends Line {
     }
 
     split(t, hedges, lines) {
-        HalfEdge.removeEdge(this.anchor.outgoingHedge, hedges);
-        HalfEdge.removeEdge(this.endpoint.outgoingHedge, hedges);
-        lines.splice(lines.indexOf(this), 1);
-        this.destroy();
-
         const x = Math.round(Util.quadraticBezierFromT(this.anchor.x, this.controlPoint.x, this.endpoint.x, t));
         const y = Math.round(Util.quadraticBezierFromT(this.anchor.y, this.controlPoint.y, this.endpoint.y, t));
 
@@ -88,6 +83,15 @@ class Curve extends Line {
         const cp2x = Math.round(Util.linearBezierFromT(this.controlPoint.x, this.endpoint.x, t));
         const cp2y = Math.round(Util.linearBezierFromT(this.controlPoint.y, this.endpoint.y, t));
 
+        if ((x === this.anchor.x && y === this.anchor.y) || (x === this.endpoint.x && y === this.endpoint.y)) {
+            return {u: null, v: this, center: null};
+        }
+
+        HalfEdge.removeEdge(this.anchor.outgoingHedge, hedges);
+        HalfEdge.removeEdge(this.endpoint.outgoingHedge, hedges);
+        lines.splice(lines.indexOf(this), 1);
+        this.destroy();
+
         let curve1 = new Curve(this.anchor.x, this.anchor.y, x, y, "#0000ff");
         let curve2 = new Curve(x, y, this.endpoint.x, this.endpoint.y, "#0000ff");
 
@@ -95,11 +99,9 @@ class Curve extends Line {
         curve2.controlPoint.setLocation(cp2x, cp2y);
 
         curve1.render();
-        curve1.anchor.hide();
-        curve1.endpoint.hide();
+        curve1.highlightOff();
         curve2.render();
-        curve2.anchor.hide();
-        curve2.endpoint.hide();
+        curve2.highlightOff();
 
         curve1.setID(Util.emptySlot(lines));
         lines[curve1.id] = curve1;

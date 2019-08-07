@@ -195,22 +195,23 @@ class Util {
         for (const line of lines.filter (l => l !== baseline)) {
             let intersectionsThisLine = 0;
             if (Line.boundingBoxOverlap(line.getBoundingBox(), baselineBBox)) {
-                let curvePairs = [{a: line, b: baseline, tMin: 0, tMax: 1}];
+                let curvePairs = [{a: line, b: baseline, atMin: 0, atMax: 1, btMin: 0, btMax: 1}];
                 while (curvePairs.length > 0) {
                     const pair = curvePairs.pop();
 
                     const pairABBox = pair.a.getBoundingBox();
                     const pairBBBox = pair.b.getBoundingBox();
 
-                    if ((pairABBox.xMax - pairABBox.xMin) < 0.5 && (pairABBox.yMax - pairABBox.yMin) < 0.5 &&
-                        (pairBBBox.xMax - pairBBBox.xMin) < 0.5 && (pairBBBox.yMax - pairBBBox.yMin) < 0.5) {
+                    if (Math.abs(pairABBox.xMax - pairABBox.xMin) < 0.5 && Math.abs(pairABBox.yMax - pairABBox.yMin) < 0.5 &&
+                        Math.abs(pairBBBox.xMax - pairBBBox.xMin) < 0.5 && Math.abs(pairBBBox.yMax - pairBBBox.yMin) < 0.5) {
 
                         const intX = pairABBox.xMax;
                         const intY = pairABBox.yMax;
-                        const intT = (pair.tMax + pair.tMin) / 2;
+                        const intAT = (pair.atMax + pair.atMin) / 2;
+                        const intBT = (pair.btMax + pair.btMin) / 2;
 
                         if (intersectionsThisLine === 0) {
-                            intersections.push({line: line, x: intX, y: intY, t: intT});
+                            intersections.push({line: line, x: intX, y: intY, intT: intAT, baselineT: intBT});
                             intersectionsThisLine++;
                         } else {
                             let merged = false;
@@ -219,13 +220,14 @@ class Util {
                                 if (dist < 5) {
                                     int.x = (int.x + intX) / 2;
                                     int.y = (int.y + intY) / 2;
-                                    int.t = (int.t + intT) / 2;
+                                    int.intT = (int.intT + intAT) / 2;
+                                    int.baselineT = (int.baselineT + intBT) / 2;
                                     merged = true;
                                     break;
                                 }
                             }
                             if (!merged) {
-                                intersections.push({line: line, x: intX, y: intY, t: intT});
+                                intersections.push({line: line, x: intX, y: intY, intT: intAT, baselineT: intBT});
                                 intersectionsThisLine++;
                             }
                         }
@@ -241,19 +243,27 @@ class Util {
 
 
                     if (Line.boundingBoxOverlap(aSplit.a.getBoundingBox(), bSplit.a.getBoundingBox())) {
-                        curvePairs.push({a: aSplit.a, b: bSplit.a, tMin: pair.tMin, tMax: (pair.tMin + pair.tMax) / 2});
+                        curvePairs.push({a: aSplit.a, b: bSplit.a,
+                                         atMin: pair.atMin, atMax: (pair.atMin + pair.atMax) / 2,
+                                         btMin: pair.btMin, btMax: (pair.btMin + pair.btMax) / 2});
                     }
 
                     if (Line.boundingBoxOverlap(aSplit.a.getBoundingBox(), bSplit.b.getBoundingBox())) {
-                        curvePairs.push({a: aSplit.a, b: bSplit.b, tMin: pair.tMin, tMax: (pair.tMin + pair.tMax) / 2});
+                        curvePairs.push({a: aSplit.a, b: bSplit.b,
+                                         atMin: pair.atMin, atMax: (pair.atMin + pair.atMax) / 2,
+                                         btMin: (pair.btMin + pair.btMax) / 2, btMax: pair.btMax});
                     }
 
                     if (Line.boundingBoxOverlap(aSplit.b.getBoundingBox(), bSplit.a.getBoundingBox())) {
-                        curvePairs.push({a: aSplit.b, b: bSplit.a, tMin: (pair.tMin + pair.tMax) / 2, tMax: pair.tMax});
+                        curvePairs.push({a: aSplit.b, b: bSplit.a,
+                                         atMin: (pair.atMin + pair.atMax) / 2, atMax: pair.atMax,
+                                         btMin: pair.btMin, btMax: (pair.btMin + pair.btMax) / 2});
                     }
 
                     if (Line.boundingBoxOverlap(aSplit.b.getBoundingBox(), bSplit.b.getBoundingBox())) {
-                        curvePairs.push({a: aSplit.b, b: bSplit.b, tMin: (pair.tMin + pair.tMax) / 2, tMax: pair.tMax});
+                        curvePairs.push({a: aSplit.b, b: bSplit.b,
+                                         atMin: (pair.atMin + pair.atMax) / 2, atMax: pair.atMax,
+                                         btMin: (pair.btMin + pair.btMax) / 2, btMax: pair.btMax});
                     }
                 }
             }

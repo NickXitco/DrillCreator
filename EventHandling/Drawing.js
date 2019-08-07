@@ -73,14 +73,31 @@ function drawUp(x, y, activeDrawing, lines, hedges, faces) {
             //TODO destroy line, reassess faces
         }
 
-        intersectionPoints = d.sortPoints(intersectionPoints);
-        console.table(intersectionPoints);
+        intersectionPoints = intersectionPoints.sort((a, b) =>  b.baselineT - a.baselineT);
 
         let splitLine = d;
         if (intersectionPoints.length !== 0) {
-            for (const intersection of intersectionPoints) {
-                const baseSplit = splitLine.split(splitLine, intersection.x, intersection.y, hedges, lines);
-                intersection.line.split(intersection.line, intersection.x, intersection.y, hedges, lines);
+            while (intersectionPoints.length > 0) {
+                const intersection = intersectionPoints.pop();
+                const baseSplit = splitLine.split(intersection.baselineT, hedges, lines);
+                const collateralSplit = intersection.line.split(intersection.intT, hedges, lines);
+
+                for (const tUpdate of intersectionPoints) {
+                    if (baseSplit.u !== null) {
+                        tUpdate.baselineT = (tUpdate.baselineT - intersection.baselineT) / (1 - intersection.baselineT);
+                    }
+
+                    if (collateralSplit.u !== null && tUpdate.line === intersection.line) {
+                        if (tUpdate.intT > intersection.intT) {
+                            tUpdate.intT = (tUpdate.intT - intersection.intT) / (1 - intersection.intT);
+                            tUpdate.line = collateralSplit.v;
+                        } else {
+                            tUpdate.intT /= intersection.intT;
+                            tUpdate.line = collateralSplit.u;
+                        }
+                    }
+                }
+
                 splitLine = baseSplit.v;
             }
         }

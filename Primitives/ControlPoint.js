@@ -1,5 +1,4 @@
 class ControlPoint extends Point {
-
     pole;
 
     constructor(x, y, curve) {
@@ -15,6 +14,10 @@ class ControlPoint extends Point {
         this.svg.setAttribute('cx', this.x);
         this.svg.setAttribute('cy', this.y);
         this.parentLine.updateD(x, y);
+        if (this.vertex !== undefined) {
+            this.vertex.x = x;
+            this.vertex.y = y;
+        }
         this.updatePole();
     }
 

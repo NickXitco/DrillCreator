@@ -145,6 +145,7 @@ function selectUp(bools, selection, lines, hedges, faces) {
         selection.rect.removeAttribute('y');
         selection.rect.removeAttribute('width');
         selection.rect.removeAttribute('height');
+        return;
     } else if (bools.movingSelection) {
         bools.movingSelection = false;
     }
@@ -179,8 +180,6 @@ function replaceLines(selection, lines, hedges) {
         endVertex.points.splice(endVertex.points.indexOf(line.endpoint), 1);
         beginningVertex.points.splice(beginningVertex.points.indexOf(line.anchor), 1);
 
-        HalfEdge.removeEdge(line.endpoint.outgoingHedge, hedges);
-
         endVertex = Vertex.addVertex(line.endpoint.x, line.endpoint.y, hedges);
         beginningVertex = Vertex.addVertex(line.anchor.x, line.anchor.y, hedges);
 
@@ -190,7 +189,17 @@ function replaceLines(selection, lines, hedges) {
         endVertex.points.push(line.endpoint);
         beginningVertex.points.push(line.anchor);
 
-        HalfEdge.addEdge(beginningVertex, endVertex, line, hedges);
+        HalfEdge.removeEdge(line.endpoint.outgoingHedge, hedges);
+
+        if (line instanceof Curve) {
+            const cpVertex = line.controlPoint.vertex;
+            HalfEdge.removeEdge(line.anchor.outgoingHedge, hedges);
+
+            HalfEdge.addEdge(beginningVertex, cpVertex, line, hedges);
+            HalfEdge.addEdge(cpVertex, endVertex, line, hedges);
+        } else {
+            HalfEdge.addEdge(beginningVertex, endVertex, line, hedges);
+        }
     }
 }
 
@@ -208,16 +217,34 @@ function handleIntersections(selection, lines, hedges) {
             //TODO destroy line, reassess faces
         }
 
-        intersectionPoints = d.sortPoints(intersectionPoints);
-        console.table(intersectionPoints);
+        intersectionPoints = intersectionPoints.sort((a, b) =>  b.baselineT - a.baselineT);
 
         let splitLine = d;
         if (intersectionPoints.length !== 0) {
-            for (const intersection of intersectionPoints) {
-                const baseSplit = splitLine.split(intersection.t, hedges, lines);
-                intersection.line.split(intersection.t, hedges, lines);
+            while (intersectionPoints.length > 0) {
+                const intersection = intersectionPoints.pop();
+                const baseSplit = splitLine.split(intersection.baselineT, hedges, lines);
+                const collateralSplit = intersection.line.split(intersection.intT, hedges, lines);
+
+                for (const tUpdate of intersectionPoints) {
+                    if (baseSplit.u !== null) {
+                        tUpdate.baselineT = (tUpdate.baselineT - intersection.baselineT) / (1 - intersection.baselineT);
+                    }
+
+                    if (collateralSplit.u !== null && tUpdate.line === intersection.line) {
+                        if (tUpdate.intT > intersection.intT) {
+                            tUpdate.intT = (tUpdate.intT - intersection.intT) / (1 - intersection.intT);
+                            tUpdate.line = collateralSplit.v;
+                        } else {
+                            tUpdate.intT /= intersection.intT;
+                            tUpdate.line = collateralSplit.u;
+                        }
+                    }
+                }
+
                 splitLine = baseSplit.v;
             }
         }
+
     }
 }

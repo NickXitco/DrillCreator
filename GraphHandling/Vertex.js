@@ -57,26 +57,4 @@ class Vertex {
         }
         return null;
     }
-
-    static getVertices(hedges) {
-        let vertices = [];
-        for (const hedge of hedges) {
-            if (!vertices.includes(hedge.origin)) {
-                vertices.push(hedge.origin);
-            }
-        }
-        return vertices;
-    }
-
-    static misaligned(vertex) {
-        let x = vertex.x;
-        let y = vertex.y;
-        for (const point of vertex.points) {
-            if (point.x !== x || point.y !== y) {
-                return true;
-            }
-        }
-        return false;
-    }
-
 }

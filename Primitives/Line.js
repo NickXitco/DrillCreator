@@ -18,6 +18,10 @@ class Line extends Canvas_Primitive {
         this.endpoint = new Endpoint(endpointX, endpointY, this, 'endpoint');
     }
 
+    render() {
+        super.render();
+    }
+
     updateD() {
         this.d = "M" + this.x + " " + this.y + " L" + this.endpointX + " " + this.endpointY;
         this.svg.setAttribute('d', this.d);
@@ -84,13 +88,13 @@ class Line extends Canvas_Primitive {
         }
 
         if (bbox.width === 0) {
-            bbox.width += 0.48;
-            bbox.x -= 0.24;
+            bbox.width += 0.375;
+            bbox.x -= 0.1875;
         }
 
         if (bbox.height === 0) {
-            bbox.height += 0.48;
-            bbox.y -= 0.24;
+            bbox.height += 0.375;
+            bbox.y -= 0.1875;
         }
         return {xMin: bbox.x, yMin: bbox.y, xMax: bbox.x + bbox.width, yMax: bbox.y + bbox.height};
     }
@@ -100,8 +104,8 @@ class Line extends Canvas_Primitive {
     }
 
     virtualSplit(t) {
-        const x = Math.round(Util.linearBezierFromT(this.anchor.x, this.endpoint.x, t));
-        const y = Math.round(Util.linearBezierFromT(this.anchor.y, this.endpoint.y, t));
+        const x = Util.linearBezierFromT(this.anchor.x, this.endpoint.x, t);
+        const y = Util.linearBezierFromT(this.anchor.y, this.endpoint.y, t);
 
         let line1 = new Line(this.anchor.x, this.anchor.y, x, y, "");
         line1.highlightOff();
@@ -117,7 +121,10 @@ class Line extends Canvas_Primitive {
         const x = Math.round(Util.linearBezierFromT(this.anchor.x, this.endpoint.x, t));
         const y = Math.round(Util.linearBezierFromT(this.anchor.y, this.endpoint.y, t));
 
-        //TODO make sure no lines are of 0 length
+        if ((x === this.anchor.x && y === this.anchor.y) || (x === this.endpoint.x && y === this.endpoint.y)) {
+            return {u: null, v: this, center: null};
+        }
+
         HalfEdge.removeEdge(this.endpoint.outgoingHedge, hedges);
         lines.splice(lines.indexOf(this), 1);
         this.destroy();
@@ -133,11 +140,9 @@ class Line extends Canvas_Primitive {
         beginningVertex.points.splice(beginningVertex.points.indexOf(this.anchor), 1);
 
         line1.render();
-        line1.anchor.hide();
-        line1.endpoint.hide();
+        line1.highlightOff();
         line2.render();
-        line2.anchor.hide();
-        line2.endpoint.hide();
+        line2.highlightOff();
 
         line1.setID(Util.emptySlot(lines));
         lines[line1.id] = line1;

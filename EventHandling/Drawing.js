@@ -57,7 +57,7 @@ function drawUp(x, y, activeDrawing, lines, hedges, faces) {
         d.anchor.vertex = anchorVertex;
         d.endpoint.vertex = endpointVertex;
         if (d instanceof Curve) {
-            const v3 = new Vertex(d.controlPoint.x, d.controlPoint.y);
+            const v3 = Vertex.addControlPointVertex(d.controlPoint.x, d.controlPoint.y);
             v3.points.push(d.controlPoint);
             d.controlPoint.vertex = v3;
             HalfEdge.addEdge(anchorVertex, v3, d, hedges);
@@ -101,6 +101,8 @@ function drawUp(x, y, activeDrawing, lines, hedges, faces) {
                 splitLine = baseSplit.v;
             }
         }
+
+        console.table(HalfEdge.getVertices(hedges));
 
         for (const face of Face.assessFaces(hedges)) {
             faces.push(face);

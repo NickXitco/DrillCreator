@@ -50,10 +50,17 @@ class Face {
 
     updateD() {
         this.d = "";
+
+        if (this.outer_edge.origin.cp) {
+            this.outer_edge = this.outer_edge.next;
+        }
         this.walkCycleUpdateD(this.outer_edge);
 
-        for (const inner of this.inner_edges) {
-            this.walkCycleUpdateD(inner);
+        for (let i = 0; i < this.inner_edges.length; i++) {
+            if (this.inner_edges[i].origin.cp) {
+                this.inner_edges[i] = this.inner_edges[i].next;
+            }
+            this.walkCycleUpdateD(this.inner_edges[i]);
         }
 
         this.svg.setAttribute('d', this.d);

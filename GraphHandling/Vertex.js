@@ -6,6 +6,8 @@ class Vertex {
 
     points = []; //Point objects linked to this vertex
 
+    cp;
+
     constructor(x, y) {
         this.x = x;
         this.y = y;
@@ -46,12 +48,20 @@ class Vertex {
         if (v !== null) {
             return v;
         }
-        return new Vertex(x, y);
+        v = new Vertex(x, y);
+        v.cp = false;
+        return v;
+    }
+
+    static addControlPointVertex(x, y) {
+        let v = new Vertex(x, y);
+        v.cp = true;
+        return v;
     }
 
     static vertexSearch(x, y, hedges) {
         for (const hedge of hedges) {
-            if (hedge.origin.x === x && hedge.origin.y === y) {
+            if (Util.distance(hedge.origin.x, x, hedge.origin.y, y) < 2) {
                 return hedge.origin;
             }
         }

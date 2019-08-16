@@ -43,7 +43,6 @@ class HalfEdge {
         return this.line instanceof Curve;
     }
 
-
     /**
      * Finds the y coordinate of the point where the hedge intersects the given x (or null if no such point exists)
      * @param x The x value to check
@@ -179,6 +178,17 @@ class HalfEdge {
             toOut.prev = fromTo;
         }
     }
+
+    static getVertices(hedges) {
+        let vertices = [];
+        for (const hedge of hedges) {
+            if (!vertices.includes(hedge.origin)) {
+                vertices.push(hedge.origin);
+            }
+        }
+        return vertices;
+    }
+
 }
 
 

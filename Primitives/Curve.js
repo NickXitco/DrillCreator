@@ -116,8 +116,8 @@ class Curve extends Line {
         beginningVertex.points.splice(beginningVertex.points.indexOf(this.anchor), 1);
 
         //We don't want these to merge with other vertices, we only want them to be visible through the curve
-        let cp1Vertex = new Vertex(cp1x, cp1y);
-        let cp2Vertex = new Vertex(cp2x, cp2y);
+        let cp1Vertex = Vertex.addControlPointVertex(cp1x, cp1y);
+        let cp2Vertex = Vertex.addControlPointVertex(cp2x, cp2y);
 
         curve1.anchor.vertex = beginningVertex;
         curve1.endpoint.vertex = centerVertex;

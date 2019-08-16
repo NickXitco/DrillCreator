@@ -150,6 +150,10 @@ function selectUp(bools, selection, lines, hedges, faces) {
         bools.movingSelection = false;
     }
 
+    if (selection.primitives.some(p => p instanceof Face)) {
+        return;
+    }
+
     for (const face of faces) {
         if (!face.global) {
             face.destroy();
